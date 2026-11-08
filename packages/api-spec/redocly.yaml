@@ -1,0 +1,7 @@
+extends:
+  - recommended
+rules:
+  # No license yet. Add one before the code is reused anywhere.
+  info-license: off
+  # The servers are the local gateway and the mock server on purpose.
+  no-server-example.com: off

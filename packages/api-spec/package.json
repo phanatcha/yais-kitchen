@@ -1,0 +1,20 @@
+{
+  "name": "@yais-kitchen/api-spec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "openapi.yaml",
+    "asyncapi.yaml"
+  ],
+  "scripts": {
+    "lint": "redocly lint openapi.yaml asyncapi.yaml",
+    "mock": "prism mock openapi.yaml --port 4010",
+    "docs": "redocly build-docs openapi.yaml --output dist/index.html"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.76.0",
+    "@stoplight/prism-cli": "^5.16.0",
+    "yaml": "^2.9.1"
+  }
+}
