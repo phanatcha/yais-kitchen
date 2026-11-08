@@ -1,0 +1,628 @@
+asyncapi: 3.0.0
+info:
+  title: Yai's Kitchen events
+  version: 0.1.0
+  description: |
+    Events the services send each other through RabbitMQ.
+
+    - Every event goes to the `yais.events` topic exchange. The routing key is
+      the event type, for example `booking.confirmed`.
+    - Each service reads from its own queue, named after the service, and binds
+      only the routing keys it needs.
+    - Delivery is at least once, so the same event can arrive twice. Consumers
+      keep the `id` of events they have handled and skip repeats.
+    - A message that fails 5 times goes to the `yais.events.dead` queue.
+    - Every message uses the same envelope: `id`, `type`, `occurredAt`,
+      `version` and `data`. Adding a field to `data` keeps the same version.
+      Removing or renaming one needs a new version.
+    - `x-requirements` names the functional requirements an event serves.
+defaultContentType: application/json
+
+servers:
+  local:
+    host: localhost:5672
+    protocol: amqp
+    description: RabbitMQ from `infra/` on your machine.
+    security:
+      - { $ref: "#/components/securitySchemes/broker" }
+
+channels:
+  authCodeRequested:
+    address: auth.code_requested
+    title: Sign-in code requested
+    messages:
+      authCodeRequested:
+        $ref: "#/components/messages/AuthCodeRequested"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  userDeleted:
+    address: user.deleted
+    title: Account deleted
+    messages:
+      userDeleted: { $ref: "#/components/messages/UserDeleted" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  applicationReceived:
+    address: application.received
+    title: Become a Yai application received
+    messages:
+      applicationReceived:
+        $ref: "#/components/messages/ApplicationReceived"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  classTimeCancelled:
+    address: class_time.cancelled
+    title: Class time cancelled
+    messages:
+      classTimeCancelled:
+        $ref: "#/components/messages/ClassTimeCancelled"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  bookingConfirmed:
+    address: booking.confirmed
+    title: Booking confirmed
+    messages:
+      bookingConfirmed:
+        $ref: "#/components/messages/BookingConfirmed"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  bookingCancelled:
+    address: booking.cancelled
+    title: Booking cancelled
+    messages:
+      bookingCancelled:
+        $ref: "#/components/messages/BookingCancelled"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  paymentSucceeded:
+    address: payment.succeeded
+    title: Payment succeeded
+    messages:
+      paymentSucceeded:
+        $ref: "#/components/messages/PaymentSucceeded"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  paymentFailed:
+    address: payment.failed
+    title: Payment failed
+    messages:
+      paymentFailed: { $ref: "#/components/messages/PaymentFailed" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  paymentRefunded:
+    address: payment.refunded
+    title: Payment refunded
+    messages:
+      paymentRefunded:
+        $ref: "#/components/messages/PaymentRefunded"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  liveClassEnded:
+    address: live_class.ended
+    title: Live class ended
+    messages:
+      liveClassEnded: { $ref: "#/components/messages/LiveClassEnded" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  recordingReady:
+    address: recording.ready
+    title: Class recording ready
+    messages:
+      recordingReady: { $ref: "#/components/messages/RecordingReady" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+
+operations:
+  # auth.code_requested
+  authSendsCodeRequested:
+    action: send
+    channel: { $ref: "#/channels/authCodeRequested" }
+    summary: Auth asks for a sign-in code email.
+    tags: [{ $ref: "#/components/tags/auth" }]
+    x-requirements: [FR-22]
+  notificationReceivesCodeRequested:
+    action: receive
+    channel: { $ref: "#/channels/authCodeRequested" }
+    summary: Notification emails the code.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-22]
+
+  # user.deleted
+  authSendsUserDeleted:
+    action: send
+    channel: { $ref: "#/channels/userDeleted" }
+    summary: Auth deleted an account.
+    tags: [{ $ref: "#/components/tags/auth" }]
+    x-requirements: [privacy]
+  bookingReceivesUserDeleted:
+    action: receive
+    channel: { $ref: "#/channels/userDeleted" }
+    summary: Booking removes the name, email, checklist and rating comments from that person's bookings.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [privacy]
+  liveClassReceivesUserDeleted:
+    action: receive
+    channel: { $ref: "#/channels/userDeleted" }
+    summary: Live-class deletes that person's recording consents.
+    tags: [{ $ref: "#/components/tags/liveclass" }]
+    x-requirements: [privacy]
+  notificationReceivesUserDeleted:
+    action: receive
+    channel: { $ref: "#/channels/userDeleted" }
+    summary: Notification cancels that person's reminders and deletes their email log.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [privacy]
+
+  # application.received
+  catalogSendsApplicationReceived:
+    action: send
+    channel: { $ref: "#/channels/applicationReceived" }
+    summary: Catalog saved a Become a Yai application.
+    tags: [{ $ref: "#/components/tags/catalog" }]
+    x-requirements: [FR-24]
+  notificationReceivesApplicationReceived:
+    action: receive
+    channel: { $ref: "#/channels/applicationReceived" }
+    summary: Notification emails the family that the application arrived, and tells Admin.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-24]
+
+  # class_time.cancelled
+  catalogSendsClassTimeCancelled:
+    action: send
+    channel: { $ref: "#/channels/classTimeCancelled" }
+    summary: Admin cancelled a class time.
+    tags: [{ $ref: "#/components/tags/catalog" }]
+    x-requirements: [FR-28, FR-30]
+  bookingReceivesClassTimeCancelled:
+    action: receive
+    channel: { $ref: "#/channels/classTimeCancelled" }
+    summary: Booking cancels every booking for that time, which refunds each one.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-30]
+
+  # booking.confirmed
+  bookingSendsBookingConfirmed:
+    action: send
+    channel: { $ref: "#/channels/bookingConfirmed" }
+    summary: Booking confirmed a booking after `payment.succeeded`.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-11, FR-12]
+  notificationReceivesBookingConfirmed:
+    action: receive
+    channel: { $ref: "#/channels/bookingConfirmed" }
+    summary: |
+      Notification emails the booking details and shopping list, and plans the
+      reminders 24 hours and 1 hour before class.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-12, FR-15]
+
+  # booking.cancelled
+  bookingSendsBookingCancelled:
+    action: send
+    channel: { $ref: "#/channels/bookingCancelled" }
+    summary: A paid booking was cancelled by the tourist, by Admin or because its class time was cancelled.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-23, FR-30]
+  paymentReceivesBookingCancelled:
+    action: receive
+    channel: { $ref: "#/channels/bookingCancelled" }
+    summary: Payment refunds the full amount through Stripe.
+    tags: [{ $ref: "#/components/tags/payment" }]
+    x-requirements: [FR-23, FR-30]
+  notificationReceivesBookingCancelled:
+    action: receive
+    channel: { $ref: "#/channels/bookingCancelled" }
+    summary: Notification cancels the reminders and emails the tourist.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-23]
+
+  # payment.succeeded
+  paymentSendsPaymentSucceeded:
+    action: send
+    channel: { $ref: "#/channels/paymentSucceeded" }
+    summary: Stripe confirmed a payment.
+    tags: [{ $ref: "#/components/tags/payment" }]
+    x-requirements: [FR-11]
+  bookingReceivesPaymentSucceeded:
+    action: receive
+    channel: { $ref: "#/channels/paymentSucceeded" }
+    summary: |
+      Booking confirms the booking. If the booking already expired, booking
+      sends `booking.cancelled` so the money goes back.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-11]
+
+  # payment.failed
+  paymentSendsPaymentFailed:
+    action: send
+    channel: { $ref: "#/channels/paymentFailed" }
+    summary: Stripe refused a payment.
+    tags: [{ $ref: "#/components/tags/payment" }]
+    x-requirements: [FR-11]
+  bookingReceivesPaymentFailed:
+    action: receive
+    channel: { $ref: "#/channels/paymentFailed" }
+    summary: Booking notes the failure. The seats stay held until the hold runs out, so the tourist can try again.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-11]
+
+  # payment.refunded
+  paymentSendsPaymentRefunded:
+    action: send
+    channel: { $ref: "#/channels/paymentRefunded" }
+    summary: Stripe finished a refund.
+    tags: [{ $ref: "#/components/tags/payment" }]
+    x-requirements: [FR-23, FR-30]
+  bookingReceivesPaymentRefunded:
+    action: receive
+    channel: { $ref: "#/channels/paymentRefunded" }
+    summary: Booking marks the booking refunded, so it stops counting toward earnings.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-30, FR-36]
+  notificationReceivesPaymentRefunded:
+    action: receive
+    channel: { $ref: "#/channels/paymentRefunded" }
+    summary: Notification tells the tourist the money is on its way back.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-23]
+
+  # live_class.ended
+  liveClassSendsLiveClassEnded:
+    action: send
+    channel: { $ref: "#/channels/liveClassEnded" }
+    summary: The helper or Admin ended the class.
+    tags: [{ $ref: "#/components/tags/liveclass" }]
+    x-requirements: [FR-33]
+  bookingReceivesLiveClassEnded:
+    action: receive
+    channel: { $ref: "#/channels/liveClassEnded" }
+    summary: |
+      Booking marks the confirmed bookings completed. They can now be rated and
+      count toward the Yai's earnings.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-21, FR-36]
+  notificationReceivesLiveClassEnded:
+    action: receive
+    channel: { $ref: "#/channels/liveClassEnded" }
+    summary: Notification emails each tourist a link to After Class.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-20]
+
+  # recording.ready
+  liveClassSendsRecordingReady:
+    action: send
+    channel: { $ref: "#/channels/recordingReady" }
+    summary: LiveKit finished saving the class recording.
+    tags: [{ $ref: "#/components/tags/liveclass" }]
+    x-requirements: [FR-37]
+  notificationReceivesRecordingReady:
+    action: receive
+    channel: { $ref: "#/channels/recordingReady" }
+    summary: Notification tells the tourists the recording is on After Class.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-20]
+
+components:
+  securitySchemes:
+    broker:
+      type: userPassword
+      description: The user and password in `RABBITMQ_URL`. Each service has its own.
+
+  tags:
+    auth:
+      name: auth
+      description: Sent or read by the auth service.
+    catalog:
+      name: catalog
+      description: Sent or read by the catalog service.
+    booking:
+      name: booking
+      description: Sent or read by the booking service.
+    payment:
+      name: payment
+      description: Sent or read by the payment service.
+    notification:
+      name: notification
+      description: Sent or read by the notification service.
+    liveclass:
+      name: live-class
+      description: Sent or read by the live-class service.
+
+  channelBindings:
+    eventsExchange:
+      amqp:
+        is: routingKey
+        exchange:
+          name: yais.events
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+
+  messages:
+    AuthCodeRequested:
+      name: auth.code_requested
+      title: Sign-in code requested
+      summary: Never log `data.code`. It is a password for 10 minutes.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: auth.code_requested }
+              data:
+                type: object
+                required: [email, code, expiresAt]
+                properties:
+                  email: { $ref: "#/components/schemas/Email" }
+                  code:
+                    type: string
+                    pattern: "^[0-9]{6}$"
+                    examples: ["482913"]
+                  expiresAt: { $ref: "#/components/schemas/DateTime" }
+    UserDeleted:
+      name: user.deleted
+      title: Account deleted
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: user.deleted }
+              data:
+                type: object
+                required: [userId]
+                properties:
+                  userId: { $ref: "#/components/schemas/Id" }
+    ApplicationReceived:
+      name: application.received
+      title: Become a Yai application received
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: application.received }
+              data:
+                type: object
+                required: [applicationId, yaiName, contactName, email]
+                properties:
+                  applicationId: { $ref: "#/components/schemas/Id" }
+                  yaiName: { type: string, examples: ["Yai Malai"] }
+                  contactName: { type: string, examples: ["Alex"] }
+                  email: { $ref: "#/components/schemas/Email" }
+    ClassTimeCancelled:
+      name: class_time.cancelled
+      title: Class time cancelled
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: class_time.cancelled }
+              data:
+                type: object
+                required: [classTimeId, classId, yaiId, startsAt]
+                properties:
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  classId: { $ref: "#/components/schemas/Id" }
+                  yaiId: { $ref: "#/components/schemas/Id" }
+                  startsAt: { $ref: "#/components/schemas/DateTime" }
+                  reason:
+                    type: string
+                    maxLength: 500
+                    examples: ["Yai is unwell."]
+    BookingConfirmed:
+      name: booking.confirmed
+      title: Booking confirmed
+      summary: Carries what the emails need, so notification doesn't call booking back.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: booking.confirmed }
+              data:
+                type: object
+                required:
+                  - bookingId
+                  - userId
+                  - email
+                  - name
+                  - classTimeId
+                  - classId
+                  - yaiId
+                  - yaiName
+                  - dish
+                  - startsAt
+                  - endsAt
+                  - guests
+                  - total
+                properties:
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  userId: { $ref: "#/components/schemas/Id" }
+                  email: { $ref: "#/components/schemas/Email" }
+                  name: { type: string, examples: ["Alex"] }
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  classId: { $ref: "#/components/schemas/Id" }
+                  yaiId: { $ref: "#/components/schemas/Id" }
+                  yaiName: { type: string, examples: ["Yai Somsri"] }
+                  dish: { type: string, examples: ["Khao Soi"] }
+                  startsAt: { $ref: "#/components/schemas/DateTime" }
+                  endsAt: { $ref: "#/components/schemas/DateTime" }
+                  guests:
+                    type: integer
+                    minimum: 1
+                    maximum: 6
+                    examples: [2]
+                  total: { $ref: "#/components/schemas/Money" }
+    BookingCancelled:
+      name: booking.cancelled
+      title: Booking cancelled
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: booking.cancelled }
+              data:
+                type: object
+                required:
+                  - bookingId
+                  - userId
+                  - email
+                  - name
+                  - classTimeId
+                  - startsAt
+                  - cancelledBy
+                  - refund
+                properties:
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  userId: { $ref: "#/components/schemas/Id" }
+                  email: { $ref: "#/components/schemas/Email" }
+                  name: { type: string, examples: ["Alex"] }
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  startsAt: { $ref: "#/components/schemas/DateTime" }
+                  cancelledBy:
+                    type: string
+                    enum:
+                      - tourist
+                      - admin
+                      - class_time_cancelled
+                      - paid_after_expiry
+                  refund:
+                    description: The amount payment should give back.
+                    allOf: [{ $ref: "#/components/schemas/Money" }]
+    PaymentSucceeded:
+      name: payment.succeeded
+      title: Payment succeeded
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: payment.succeeded }
+              data:
+                type: object
+                required: [paymentId, bookingId, amount, method]
+                properties:
+                  paymentId: { $ref: "#/components/schemas/Id" }
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  amount: { $ref: "#/components/schemas/Money" }
+                  method: { type: string, enum: [card, promptpay] }
+    PaymentFailed:
+      name: payment.failed
+      title: Payment failed
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: payment.failed }
+              data:
+                type: object
+                required: [paymentId, bookingId, reason]
+                properties:
+                  paymentId: { $ref: "#/components/schemas/Id" }
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  reason:
+                    type: string
+                    description: Stripe's decline code.
+                    examples: [card_declined]
+    PaymentRefunded:
+      name: payment.refunded
+      title: Payment refunded
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: payment.refunded }
+              data:
+                type: object
+                required: [paymentId, bookingId, amount]
+                properties:
+                  paymentId: { $ref: "#/components/schemas/Id" }
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  amount: { $ref: "#/components/schemas/Money" }
+    LiveClassEnded:
+      name: live_class.ended
+      title: Live class ended
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: live_class.ended }
+              data:
+                type: object
+                required: [classTimeId, endedAt]
+                properties:
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  endedAt: { $ref: "#/components/schemas/DateTime" }
+    RecordingReady:
+      name: recording.ready
+      title: Class recording ready
+      summary: The file is private. Only live-class hands out links to it.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: recording.ready }
+              data:
+                type: object
+                required:
+                  - classTimeId
+                  - objectKey
+                  - durationSeconds
+                  - deleteAfter
+                properties:
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  objectKey:
+                    type: string
+                    examples: ["recordings/6650a1f2c3d4e5f6a7b8c9d2.mp4"]
+                  durationSeconds: { type: integer, examples: [5400] }
+                  deleteAfter:
+                    description: 90 days after the class.
+                    allOf: [{ $ref: "#/components/schemas/DateTime" }]
+
+  schemas:
+    Envelope:
+      type: object
+      required: [id, type, occurredAt, version, data]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique per event. Consumers use it to skip repeats.
+        type:
+          type: string
+          description: The same as the routing key.
+        occurredAt: { $ref: "#/components/schemas/DateTime" }
+        version: { type: integer, minimum: 1, examples: [1] }
+        data: { type: object }
+    Id:
+      type: string
+      pattern: "^[a-f0-9]{24}$"
+      examples: ["6650a1f2c3d4e5f6a7b8c9d0"]
+    DateTime:
+      type: string
+      format: date-time
+      examples: ["2026-11-20T09:00:00Z"]
+    Email:
+      type: string
+      format: email
+      examples: ["guest@example.com"]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          description: Satang. 90000 is THB 900.
+          examples: [90000]
+        currency: { type: string, const: THB }

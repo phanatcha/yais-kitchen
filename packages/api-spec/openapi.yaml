@@ -1,0 +1,2846 @@
+openapi: 3.1.0
+info:
+  title: Yai's Kitchen API
+  version: 0.1.0
+  description: |
+    The HTTP API behind the Yai's Kitchen website. The web app only ever calls
+    the gateway, and each path starts with the service that owns it, so
+    `/catalog/yais` is served by the catalog service.
+
+    Rules that hold for every operation (more in README.md next to this file):
+
+    - Bodies are JSON with camelCase fields. Times are ISO 8601 in UTC.
+    - Money is an integer number of satang (1 THB = 100 satang).
+    - Lists take `limit` and `cursor` and return `items` and `nextCursor`
+      (`null` on the last page).
+    - Every error uses the `Error` shape.
+    - `x-roles` lists who may call an operation. Operations with
+      `security: []` are public.
+    - `x-requirements` names the requirements an operation serves.
+    - Paths under `/internal` are for calls between services. The gateway
+      never forwards them.
+    - Changes are additive. A breaking change needs a new path.
+servers:
+  - url: http://localhost:8080/api
+    description: Gateway on your machine
+  - url: http://127.0.0.1:4010
+    description: Mock server from `npm run mock`
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+    description: Sign-in with email codes, tokens and user accounts.
+  - name: Catalog
+    description: Yais, classes, recipes, class times, applications and the FAQ.
+  - name: Booking
+    description: Seat holds, bookings, ratings, earnings and payouts.
+  - name: Payment
+    description: Stripe payments by card and PromptPay, and refunds.
+  - name: Live class
+    description: Joining the video call, recipe steps, consent and recordings.
+  - name: Media
+    description: Uploading and checking photos and videos.
+  - name: Internal
+    description: Calls between services. Never routed by the gateway.
+
+paths:
+  # ---------------------------------------------------------------- auth
+  /auth/codes:
+    post:
+      tags: [Auth]
+      operationId: requestSignInCode
+      summary: Email a 6-digit sign-in code
+      description: |
+        Always answers 202, even for an unknown email, so nobody can find out
+        who has an account. A new tourist account is made on the first
+        successful sign-in. The code is stored hashed and expires after 10
+        minutes.
+      security: []
+      x-roles: []
+      x-rate-limit: { windowSeconds: 900, max: 5, key: email }
+      x-requirements: [FR-22]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              additionalProperties: false
+              properties:
+                email: { $ref: "#/components/schemas/Email" }
+      responses:
+        "202":
+          description: A code is on its way if the email can sign in.
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/sessions:
+    post:
+      tags: [Auth]
+      operationId: signIn
+      summary: Sign in with the emailed code
+      description: |
+        Returns a 15-minute access token and sets the refresh token in an
+        httpOnly cookie. Five wrong codes in a row lock that code.
+      security: []
+      x-roles: []
+      x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
+      x-requirements: [FR-22]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              additionalProperties: false
+              properties:
+                email: { $ref: "#/components/schemas/Email" }
+                code:
+                  type: string
+                  pattern: "^[0-9]{6}$"
+                  examples: ["482913"]
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionWithCookie"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/sessions/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshSession
+      summary: Swap the refresh cookie for a new access token
+      description: The refresh token rotates on every use.
+      security:
+        - refreshCookie: []
+      x-roles: []
+      x-requirements: [FR-22]
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionWithCookie"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/sessions/current:
+    delete:
+      tags: [Auth]
+      operationId: signOut
+      summary: Sign out and clear the refresh cookie
+      security:
+        - refreshCookie: []
+      x-roles: []
+      x-requirements: [FR-22]
+      responses:
+        "204":
+          description: Signed out.
+          headers:
+            Set-Cookie:
+              description: Clears `yk_refresh`.
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/guest-sessions:
+    post:
+      tags: [Auth]
+      operationId: startGuestSession
+      summary: Start checkout without signing in
+      description: |
+        Used by the Your Details page. Finds or creates the tourist account for
+        this email and returns a 30-minute guest token. A guest token can only
+        create a booking, pay for it and read that booking. To see My Classes
+        the tourist signs in with a code. The name is only saved for a new
+        account.
+      security: []
+      x-roles: []
+      x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
+      x-requirements: [FR-09]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name]
+              additionalProperties: false
+              properties:
+                email: { $ref: "#/components/schemas/Email" }
+                name: { $ref: "#/components/schemas/PersonName" }
+      responses:
+        "201":
+          description: Guest token for checkout.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getMe
+      summary: The signed-in user
+      x-roles: [tourist, family, helper, admin]
+      x-requirements: [FR-22]
+      responses:
+        "200":
+          description: The user.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Auth]
+      operationId: deleteMe
+      summary: Delete my account and my data
+      description: |
+        Deletes the account and sends `user.deleted`, so every service removes
+        this person's data (Thailand PDPA). Bookings already paid are kept
+        without the person's name and email, because the money records must
+        stay.
+      x-roles: [tourist]
+      x-requirements: [privacy]
+      responses:
+        "202":
+          description: Deletion started.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/users:
+    get:
+      tags: [Auth]
+      operationId: listUsers
+      summary: List users, for example every helper
+      x-roles: [admin]
+      x-requirements: [FR-28]
+      parameters:
+        - name: role
+          in: query
+          schema: { $ref: "#/components/schemas/AccountRole" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of users.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Auth]
+      operationId: createUser
+      summary: Create a family, helper or admin account
+      description: Tourists make their own accounts. A family account needs `yaiId`.
+      x-roles: [admin]
+      x-requirements: [FR-28, FR-34]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name, role]
+              additionalProperties: false
+              properties:
+                email: { $ref: "#/components/schemas/Email" }
+                name: { $ref: "#/components/schemas/PersonName" }
+                role:
+                  type: string
+                  enum: [family, helper, admin]
+                yaiId: { $ref: "#/components/schemas/Id" }
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  # ------------------------------------------------------------- catalog
+  /catalog/yais:
+    get:
+      tags: [Catalog]
+      operationId: listYais
+      summary: Browse Yais
+      description: |
+        Public. Shows visible Yais only. Admin can add `includeHidden=true`.
+        Home uses `featured=true`.
+      security:
+        - {}
+        - bearerAuth: []
+      x-roles: []
+      x-requirements: [FR-01, FR-03, FR-26]
+      parameters:
+        - name: q
+          in: query
+          description: Search in names, story and dishes.
+          schema: { type: string, maxLength: 100 }
+        - name: region
+          in: query
+          schema: { $ref: "#/components/schemas/Region" }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+        - name: includeHidden
+          in: query
+          description: Admin only.
+          schema: { type: boolean, default: false }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of Yais.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/YaiPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Catalog]
+      operationId: createYai
+      summary: Add a Yai
+      x-roles: [admin]
+      x-requirements: [FR-26]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/YaiInput" }
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Yai" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /catalog/yais/{yaiId}:
+    parameters:
+      - { $ref: "#/components/parameters/YaiId" }
+    get:
+      tags: [Catalog]
+      operationId: getYai
+      summary: A Yai's profile and her classes
+      security: []
+      x-roles: []
+      x-requirements: [FR-04]
+      responses:
+        "200":
+          description: The Yai.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Yai" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Catalog]
+      operationId: updateYai
+      summary: Edit, show or hide a Yai
+      x-roles: [admin]
+      x-requirements: [FR-26]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/YaiPatch" }
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Yai" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /catalog/classes:
+    get:
+      tags: [Catalog]
+      operationId: listClasses
+      summary: Browse classes
+      description: Public. Shows visible classes only. Admin can add `includeHidden=true`.
+      security:
+        - {}
+        - bearerAuth: []
+      x-roles: []
+      x-requirements: [FR-01, FR-05]
+      parameters:
+        - name: q
+          in: query
+          description: Search in dish names and descriptions.
+          schema: { type: string, maxLength: 100 }
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: region
+          in: query
+          schema: { $ref: "#/components/schemas/Region" }
+        - name: maxPrice
+          in: query
+          description: Highest price per person, in satang.
+          schema: { type: integer, minimum: 0 }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+        - name: includeHidden
+          in: query
+          description: Admin only.
+          schema: { type: boolean, default: false }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of classes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Catalog]
+      operationId: createClass
+      summary: Add a class
+      x-roles: [admin]
+      x-requirements: [FR-27]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClassInput" }
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /catalog/classes/{classId}:
+    parameters:
+      - { $ref: "#/components/parameters/ClassId" }
+    get:
+      tags: [Catalog]
+      operationId: getClass
+      summary: Class detail
+      security: []
+      x-roles: []
+      x-requirements: [FR-06]
+      responses:
+        "200":
+          description: The class.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Catalog]
+      operationId: updateClass
+      summary: Edit, show or hide a class
+      x-roles: [admin]
+      x-requirements: [FR-27]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClassPatch" }
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /catalog/classes/{classId}/recipe:
+    parameters:
+      - { $ref: "#/components/parameters/ClassId" }
+    get:
+      tags: [Catalog]
+      operationId: getRecipe
+      summary: The recipe card and shopping list
+      description: |
+        Public for now. Get Ready uses `ingredients` as the shopping checklist,
+        and After Class shows the whole card.
+      security: []
+      x-roles: []
+      x-requirements: [FR-12, FR-13, FR-20]
+      responses:
+        "200":
+          description: The recipe.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Catalog]
+      operationId: putRecipe
+      summary: Write the recipe for a class
+      x-roles: [admin]
+      x-requirements: [FR-27]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /catalog/yais/{yaiId}/available-times:
+    parameters:
+      - { $ref: "#/components/parameters/YaiId" }
+    get:
+      tags: [Catalog]
+      operationId: listAvailableTimes
+      summary: When the Yai can teach
+      description: A family can only see their own Yai.
+      x-roles: [family, admin]
+      x-requirements: [FR-34]
+      parameters:
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of available times.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailableTimePage"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Catalog]
+      operationId: addAvailableTime
+      summary: Add a time the Yai can teach
+      x-roles: [family, admin]
+      x-requirements: [FR-34]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startsAt, endsAt]
+              additionalProperties: false
+              properties:
+                startsAt: { $ref: "#/components/schemas/DateTime" }
+                endsAt: { $ref: "#/components/schemas/DateTime" }
+      responses:
+        "201":
+          description: Added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AvailableTime" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /catalog/yais/{yaiId}/available-times/{availableTimeId}:
+    parameters:
+      - { $ref: "#/components/parameters/YaiId" }
+      - name: availableTimeId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/Id" }
+    delete:
+      tags: [Catalog]
+      operationId: deleteAvailableTime
+      summary: Remove a time the Yai can no longer teach
+      description: Not allowed once Admin has turned it into a class time.
+      x-roles: [family, admin]
+      x-requirements: [FR-34]
+      responses:
+        "204":
+          description: Removed.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /catalog/class-times:
+    get:
+      tags: [Catalog]
+      operationId: listClassTimes
+      summary: Class times for Admin, helpers and families
+      description: |
+        Admin sees every class time. A helper sees the ones assigned to them.
+        A family sees their own Yai's. Tourists use `GET /booking/class-times`.
+      x-roles: [admin, helper, family]
+      x-requirements: [FR-28, FR-32, FR-35]
+      parameters:
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/ClassTimeStatus" }
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of class times.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassTimePage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Catalog]
+      operationId: createClassTime
+      summary: Turn an available time into a class time
+      description: |
+        The class time stays a draft until it has a helper. Then it is
+        published and tourists can book it.
+      x-roles: [admin]
+      x-requirements: [FR-28]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classId, availableTimeId]
+              additionalProperties: false
+              properties:
+                classId: { $ref: "#/components/schemas/Id" }
+                availableTimeId: { $ref: "#/components/schemas/Id" }
+                helperId: { $ref: "#/components/schemas/Id" }
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassTime" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /catalog/class-times/{classTimeId}:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    patch:
+      tags: [Catalog]
+      operationId: updateClassTime
+      summary: Assign a helper or cancel a class time
+      description: |
+        Setting `status: cancelled` sends `class_time.cancelled`, and booking
+        cancels and refunds every booking for it.
+      x-roles: [admin]
+      x-requirements: [FR-28]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                helperId: { $ref: "#/components/schemas/Id" }
+                status: { type: string, enum: [cancelled] }
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassTime" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /catalog/faq:
+    get:
+      tags: [Catalog]
+      operationId: getFaq
+      summary: Help and FAQ
+      security: []
+      x-roles: []
+      x-requirements: [FR-25]
+      responses:
+        "200":
+          description: The FAQ.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Faq" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Catalog]
+      operationId: putFaq
+      summary: Edit the FAQ
+      x-roles: [admin]
+      x-requirements: [FR-31]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Faq" }
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Faq" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /catalog/applications:
+    post:
+      tags: [Catalog]
+      operationId: submitApplication
+      summary: Apply to become a Yai
+      description: Saves the application and sends `application.received`.
+      security: []
+      x-roles: []
+      x-rate-limit: { windowSeconds: 3600, max: 5, key: ip }
+      x-requirements: [FR-24]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationInput"
+      responses:
+        "201":
+          description: Received.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { $ref: "#/components/schemas/Id" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    get:
+      tags: [Catalog]
+      operationId: listApplications
+      summary: Become a Yai applications
+      x-roles: [admin]
+      x-requirements: [FR-29]
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApplicationStage"
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of applications.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApplicationPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /catalog/applications/{applicationId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/Id" }
+    patch:
+      tags: [Catalog]
+      operationId: updateApplication
+      summary: Move an application to its next stage
+      x-roles: [admin]
+      x-requirements: [FR-29]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                stage:
+                  $ref: "#/components/schemas/ApplicationStage"
+                notes: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ------------------------------------------------------------- booking
+  /booking/class-times:
+    get:
+      tags: [Booking]
+      operationId: listBookableTimes
+      summary: Pick a Time
+      description: Published class times for one class, with the seats left.
+      security: []
+      x-roles: []
+      x-requirements: [FR-07]
+      parameters:
+        - name: classId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Id" }
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+      responses:
+        "200":
+          description: Bookable times, soonest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: "#/components/schemas/BookableTime" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /booking/holds:
+    post:
+      tags: [Booking]
+      operationId: createHold
+      summary: Hold seats for 10 minutes
+      description: |
+        Holding is atomic, so two people can never take the last seat. The
+        hold ID is a secret: whoever has it can turn it into a booking.
+      security: []
+      x-roles: []
+      x-rate-limit: { windowSeconds: 600, max: 10, key: ip }
+      x-requirements: [FR-08]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classTimeId, guests]
+              additionalProperties: false
+              properties:
+                classTimeId: { $ref: "#/components/schemas/Id" }
+                guests: { $ref: "#/components/schemas/Guests" }
+      responses:
+        "201":
+          description: Seats held.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hold" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /booking/holds/{holdId}:
+    parameters:
+      - name: holdId
+        in: path
+        required: true
+        schema: { type: string, minLength: 20, maxLength: 64 }
+    delete:
+      tags: [Booking]
+      operationId: releaseHold
+      summary: Give the held seats back
+      security: []
+      x-roles: []
+      x-requirements: [FR-08]
+      responses:
+        "204":
+          description: Released, or already gone.
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /booking/bookings:
+    post:
+      tags: [Booking]
+      operationId: createBooking
+      summary: Turn a hold into a booking that waits for payment
+      description: |
+        The booking is confirmed only when payment sends `payment.succeeded`.
+        If nobody pays before the hold runs out, the booking expires and the
+        seats go back.
+      x-roles: [guest, tourist]
+      x-requirements: [FR-09, FR-11]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [holdId]
+              additionalProperties: false
+              properties:
+                holdId: { type: string, minLength: 20, maxLength: 64 }
+      responses:
+        "201":
+          description: Booking waiting for payment.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      tags: [Booking]
+      operationId: listBookings
+      summary: My Classes, a Yai's bookings, or every booking
+      description: |
+        A tourist sees their own bookings. A family sees bookings for their
+        Yai, with first names only. Admin sees everything.
+      x-roles: [tourist, family, admin]
+      x-requirements: [FR-23, FR-30, FR-35]
+      parameters:
+        - name: when
+          in: query
+          schema: { type: string, enum: [upcoming, past] }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/BookingStatus" }
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: classTimeId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of bookings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BookingPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /booking/bookings/{bookingId}:
+    parameters:
+      - { $ref: "#/components/parameters/BookingId" }
+    get:
+      tags: [Booking]
+      operationId: getBooking
+      summary: One booking
+      description: |
+        Booking Confirmed polls this until `status` is `confirmed`. Get Ready
+        and After Class read it too. Guests and tourists see only their own.
+      x-roles: [guest, tourist, family, admin]
+      x-requirements: [FR-11, FR-12, FR-13]
+      responses:
+        "200":
+          description: The booking.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /booking/bookings/{bookingId}/cancel:
+    parameters:
+      - { $ref: "#/components/parameters/BookingId" }
+    post:
+      tags: [Booking]
+      operationId: cancelBooking
+      summary: Cancel a booking with a full refund
+      description: |
+        A tourist can cancel their own booking up to 48 hours before class.
+        Admin can cancel any booking at any time. Sends `booking.cancelled`,
+        and payment refunds the money. Cancelling twice is harmless.
+      x-roles: [tourist, admin]
+      x-requirements: [FR-23, FR-30]
+      responses:
+        "200":
+          description: Cancelled.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /booking/bookings/{bookingId}/checklist:
+    parameters:
+      - { $ref: "#/components/parameters/BookingId" }
+    put:
+      tags: [Booking]
+      operationId: updateChecklist
+      summary: Save the shopping list ticks
+      x-roles: [tourist]
+      x-requirements: [FR-13]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [checkedIngredientIds]
+              additionalProperties: false
+              properties:
+                checkedIngredientIds:
+                  type: array
+                  maxItems: 50
+                  uniqueItems: true
+                  items: { type: string, maxLength: 40 }
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /booking/bookings/{bookingId}/rating:
+    parameters:
+      - { $ref: "#/components/parameters/BookingId" }
+    post:
+      tags: [Booking]
+      operationId: rateBooking
+      summary: Rate a finished class, once
+      x-roles: [tourist]
+      x-requirements: [FR-21]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RatingInput" }
+      responses:
+        "201":
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Rating" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /booking/ratings:
+    get:
+      tags: [Booking]
+      operationId: listRatings
+      summary: Every rating
+      x-roles: [admin]
+      x-requirements: [FR-31]
+      parameters:
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of ratings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RatingPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /booking/earnings:
+    get:
+      tags: [Booking]
+      operationId: getEarnings
+      summary: What a Yai earned, by class or by month
+      description: |
+        The Yai earns 75% of each paid booking once the class has happened.
+        A family sees only their own Yai.
+      x-roles: [family, admin]
+      x-requirements: [FR-30, FR-36]
+      parameters:
+        - name: yaiId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [class, month]
+            default: month
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+      responses:
+        "200":
+          description: Earnings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Earnings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /booking/payouts:
+    get:
+      tags: [Booking]
+      operationId: listPayouts
+      summary: Weekly payouts to Yais
+      description: |
+        Booking adds up each Yai's share every week. Admin pays it by
+        PromptPay and marks it paid. A family sees only their own Yai.
+      x-roles: [family, admin]
+      x-requirements: [FR-30, FR-36]
+      parameters:
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: status
+          in: query
+          schema: { type: string, enum: [due, paid] }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of payouts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PayoutPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /booking/payouts/{payoutId}/mark-paid:
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/Id" }
+    post:
+      tags: [Booking]
+      operationId: markPayoutPaid
+      summary: Mark a payout as paid
+      description: Marking it paid twice is harmless.
+      x-roles: [admin]
+      x-requirements: [FR-30]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference]
+              additionalProperties: false
+              properties:
+                reference:
+                  type: string
+                  maxLength: 100
+                  description: The PromptPay transfer reference.
+                  examples: ["PP20261115-0042"]
+      responses:
+        "200":
+          description: Marked paid.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payout" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ------------------------------------------------------------- payment
+  /payment/intents:
+    post:
+      tags: [Payment]
+      operationId: createPaymentIntent
+      summary: Start paying for a booking
+      description: |
+        Returns the client secret for Stripe Elements. Card numbers go
+        straight to Stripe and never touch our servers. One booking has one
+        payment intent, so asking again returns the same one.
+      x-roles: [guest, tourist]
+      x-rate-limit: { windowSeconds: 600, max: 10, key: user }
+      x-requirements: [FR-10]
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId, method]
+              additionalProperties: false
+              properties:
+                bookingId: { $ref: "#/components/schemas/Id" }
+                method: { $ref: "#/components/schemas/PaymentMethod" }
+      responses:
+        "201":
+          description: Ready to pay.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentIntent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /payment/webhooks/stripe:
+    post:
+      tags: [Payment]
+      operationId: handleStripeWebhook
+      summary: Stripe tells us a payment or refund happened
+      description: |
+        Checked with the `Stripe-Signature` header and handled once per Stripe
+        event ID, even if Stripe sends it twice. Sends `payment.succeeded`,
+        `payment.failed` or `payment.refunded`.
+      security: []
+      x-roles: []
+      x-requirements: [FR-11]
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: A Stripe event. Read the raw body to check the signature.
+      responses:
+        "200":
+          description: Received.
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /payment/payments:
+    get:
+      tags: [Payment]
+      operationId: listPayments
+      summary: Every payment and refund
+      x-roles: [admin]
+      x-requirements: [FR-30]
+      parameters:
+        - name: bookingId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/PaymentStatus" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of payments.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ---------------------------------------------------------- live class
+  /live/class-times/{classTimeId}/join:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    post:
+      tags: [Live class]
+      operationId: joinClass
+      summary: Get a ticket into the video call
+      description: |
+        Opens 10 minutes before class starts. Allowed for tourists with a
+        confirmed booking, the assigned helper, the Yai's family (who runs the
+        device for the Yai) and Admin. Captions arrive as data messages in the
+        call.
+      x-roles: [tourist, helper, family, admin]
+      x-requirements: [FR-14, FR-16, FR-18, FR-32, FR-35]
+      responses:
+        "200":
+          description: Join details for LiveKit.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinTicket" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /live/class-times/{classTimeId}/state:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    get:
+      tags: [Live class]
+      operationId: getLiveState
+      summary: Current recipe step and recording state
+      description: For people joining late. Changes are pushed through the call.
+      x-roles: [tourist, helper, family, admin]
+      x-requirements: [FR-17, FR-19]
+      responses:
+        "200":
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LiveState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /live/class-times/{classTimeId}/step:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    put:
+      tags: [Live class]
+      operationId: setStep
+      summary: Move the recipe to a step
+      description: Every screen in the call shows the new step at once.
+      x-roles: [helper]
+      x-requirements: [FR-17, FR-33]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [index]
+              additionalProperties: false
+              properties:
+                index:
+                  type: integer
+                  minimum: 0
+                  maximum: 49
+                  examples: [2]
+      responses:
+        "200":
+          description: Moved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LiveState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /live/class-times/{classTimeId}/consent:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    post:
+      tags: [Live class]
+      operationId: giveRecordingConsent
+      summary: Agree or refuse to be recorded
+      x-roles: [tourist, helper, family]
+      x-requirements: [FR-19]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agree]
+              additionalProperties: false
+              properties:
+                agree: { type: boolean }
+      responses:
+        "200":
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LiveState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /live/class-times/{classTimeId}/recording:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    post:
+      tags: [Live class]
+      operationId: controlRecording
+      summary: Start or stop recording
+      description: Starting fails with 409 unless everyone in the call has agreed.
+      x-roles: [helper]
+      x-requirements: [FR-19]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              additionalProperties: false
+              properties:
+                action: { type: string, enum: [start, stop] }
+      responses:
+        "200":
+          description: Done.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LiveState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      tags: [Live class]
+      operationId: getRecordingLink
+      summary: A private link to the class recording
+      description: |
+        For that class's tourists, the Yai's family and Admin. The link works
+        for one hour. Recordings are deleted 90 days after the class.
+      x-roles: [tourist, family, admin]
+      x-requirements: [FR-20, FR-39]
+      responses:
+        "200":
+          description: The link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignedLink" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /live/class-times/{classTimeId}/end:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    post:
+      tags: [Live class]
+      operationId: endClass
+      summary: End the class for everyone
+      description: Sends `live_class.ended`. Ending twice is harmless.
+      x-roles: [helper, admin]
+      x-requirements: [FR-33]
+      responses:
+        "200":
+          description: Ended.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LiveState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /live/webhooks/livekit:
+    post:
+      tags: [Live class]
+      operationId: handleLiveKitWebhook
+      summary: LiveKit tells us a recording finished
+      description: |
+        Checked with the signed `Authorization` header from LiveKit. A finished
+        recording sends `recording.ready`.
+      security: []
+      x-roles: []
+      x-requirements: [FR-37]
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/webhook+json:
+            schema:
+              type: object
+              description: A LiveKit webhook event.
+      responses:
+        "200":
+          description: Received.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # --------------------------------------------------------------- media
+  /media/uploads:
+    post:
+      tags: [Media]
+      operationId: createUpload
+      summary: Get a link to upload a photo or video
+      description: |
+        The browser uploads the file straight to storage with `uploadUrl`,
+        then calls complete. Photos: JPEG, PNG or WebP up to 15 MB. Videos:
+        MP4 or MOV up to 500 MB.
+      x-roles: [admin, family]
+      x-requirements: [FR-37, FR-38]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, contentType, sizeBytes]
+              additionalProperties: false
+              properties:
+                kind: { $ref: "#/components/schemas/AssetKind" }
+                contentType:
+                  type: string
+                  enum:
+                    - image/jpeg
+                    - image/png
+                    - image/webp
+                    - video/mp4
+                    - video/quicktime
+                sizeBytes:
+                  type: integer
+                  minimum: 1
+                  maximum: 524288000
+      responses:
+        "201":
+          description: Upload link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Upload" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /media/uploads/{assetId}/complete:
+    parameters:
+      - { $ref: "#/components/parameters/AssetId" }
+    post:
+      tags: [Media]
+      operationId: completeUpload
+      summary: Check and process an uploaded file
+      description: |
+        Media checks the real file type and size, resizes photos to WebP, and
+        checks videos and makes a poster frame. Poll `GET /media/assets/{assetId}`
+        until `status` is `ready` or `rejected`.
+      x-roles: [admin, family]
+      x-requirements: [FR-38]
+      responses:
+        "202":
+          description: Processing.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Asset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /media/assets/{assetId}:
+    parameters:
+      - { $ref: "#/components/parameters/AssetId" }
+    get:
+      tags: [Media]
+      operationId: getAsset
+      summary: An uploaded file and its links
+      x-roles: [admin, family]
+      x-requirements: [FR-38, FR-39]
+      responses:
+        "200":
+          description: The asset.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Asset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ------------------------------------------------------------ internal
+  /internal/catalog/class-times:
+    get:
+      tags: [Internal]
+      operationId: internalListClassTimes
+      summary: Published class times for one class (used by booking)
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-07]
+      parameters:
+        - name: classId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Id" }
+        - { $ref: "#/components/parameters/From" }
+        - { $ref: "#/components/parameters/To" }
+      responses:
+        "200":
+          description: Published class times.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: "#/components/schemas/ClassTime" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /internal/catalog/class-times/{classTimeId}:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    get:
+      tags: [Internal]
+      operationId: internalGetClassTime
+      summary: A class time with its class, Yai and ingredients
+      description: |
+        Booking uses it to hold seats and check the 48-hour rule, live-class to
+        check who may join, and notification to write emails.
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-08, FR-12, FR-14]
+      responses:
+        "200":
+          description: The class time and what belongs to it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassTimeContext"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/booking/bookings/{bookingId}:
+    parameters:
+      - { $ref: "#/components/parameters/BookingId" }
+    get:
+      tags: [Internal]
+      operationId: internalGetBooking
+      summary: A booking (used by payment to check the amount)
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-10]
+      responses:
+        "200":
+          description: The booking.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/booking/class-times/{classTimeId}/participants:
+    parameters:
+      - { $ref: "#/components/parameters/ClassTimeId" }
+    get:
+      tags: [Internal]
+      operationId: internalListParticipants
+      summary: Tourists with a confirmed booking (used by live-class)
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-14, FR-20]
+      responses:
+        "200":
+          description: User IDs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userIds]
+                properties:
+                  userIds:
+                    type: array
+                    maxItems: 6
+                    items: { $ref: "#/components/schemas/Id" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /internal/media/signed-links:
+    post:
+      tags: [Internal]
+      operationId: internalCreateSignedLink
+      summary: A short-lived link to a private file (used by live-class)
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-39]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [objectKey]
+              additionalProperties: false
+              properties:
+                objectKey:
+                  type: string
+                  pattern: "^recordings/"
+                  examples: ["recordings/6650a1f2c3d4e5f6a7b8c9d2.mp4"]
+                expiresInSeconds:
+                  type: integer
+                  minimum: 60
+                  maximum: 3600
+                  default: 3600
+      responses:
+        "201":
+          description: The link.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignedLink" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token from `signIn` (15 minutes) or guest token from
+        `startGuestSession` (30 minutes). Auth signs it with its Ed25519
+        private key, and every service checks it with the public key.
+        Claims: `sub` (user ID), `role`, `email`, `name`, and `yaiId` for
+        family accounts. A guest token has `role: guest`.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: yk_refresh
+      description: httpOnly, Secure, SameSite=Strict, path `/api/auth/sessions`, 30 days.
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: Shared secret between services. Never sent by the web app.
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    Cursor:
+      name: cursor
+      in: query
+      description: The `nextCursor` from the previous page.
+      schema: { type: string, maxLength: 200 }
+    From:
+      name: from
+      in: query
+      description: Earliest start time. Defaults to now.
+      schema: { $ref: "#/components/schemas/DateTime" }
+    To:
+      name: to
+      in: query
+      description: Latest start time.
+      schema: { $ref: "#/components/schemas/DateTime" }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: |
+        A new UUID for each attempt the user makes. Sending the same key again
+        within 24 hours returns the first answer instead of doing it twice.
+      schema: { type: string, format: uuid }
+    YaiId:
+      name: yaiId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    ClassId:
+      name: classId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    ClassTimeId:
+      name: classTimeId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    BookingId:
+      name: bookingId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+
+  responses:
+    BadRequest:
+      description: The request doesn't match this spec.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: validation_failed
+              message: Some fields are wrong.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: false
+              details:
+                - field: email
+                  message: must be an email address
+    Unauthorized:
+      description: Missing, expired or wrong sign-in.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: unauthorized
+              message: Please sign in again.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: false
+    Forbidden:
+      description: Signed in, but this role or person may not do this.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: forbidden
+              message: You can't do that.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: false
+    NotFound:
+      description: Nothing with that ID.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: not_found
+              message: We couldn't find that.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: false
+    Conflict:
+      description: |
+        The request is valid but can't happen now. `code` says why, for example
+        `not_enough_seats`, `hold_expired`, `too_late_to_cancel`,
+        `already_rated`, `class_not_finished`, `join_not_open` or
+        `consent_missing`.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: not_enough_seats
+              message: Only 1 seat is left for this time.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: false
+    TooManyRequests:
+      description: Too many tries. Wait for `Retry-After` seconds.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: rate_limited
+              message: Too many tries. Please wait a few minutes.
+              requestId: req_01JC8Z6Q2K9W3T
+              retryable: true
+    SessionWithCookie:
+      description: Signed in.
+      headers:
+        Set-Cookie:
+          description: Sets the `yk_refresh` cookie.
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Session" }
+
+  schemas:
+    Id:
+      type: string
+      pattern: "^[a-f0-9]{24}$"
+      examples: ["6650a1f2c3d4e5f6a7b8c9d0"]
+    DateTime:
+      type: string
+      format: date-time
+      examples: ["2026-11-20T09:00:00Z"]
+    Email:
+      type: string
+      format: email
+      maxLength: 254
+      examples: ["guest@example.com"]
+    PersonName:
+      type: string
+      minLength: 1
+      maxLength: 80
+      examples: ["Alex"]
+    Money:
+      type: object
+      required: [amount, currency]
+      additionalProperties: false
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          description: Satang. 90000 is THB 900.
+          examples: [90000]
+        currency: { type: string, const: THB }
+    Region:
+      type: string
+      enum: [north, northeast, central, east, west, south]
+    Guests:
+      type: integer
+      minimum: 1
+      maximum: 6
+      examples: [2]
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, retryable]
+          properties:
+            code: { type: string, examples: [not_enough_seats] }
+            message:
+              type: string
+              description: Safe to show to the user.
+            requestId:
+              type: string
+              description: The same ID is in every log line for this request.
+            retryable: { type: boolean }
+            details:
+              type: array
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+
+    # auth
+    AccountRole:
+      type: string
+      enum: [tourist, family, helper, admin]
+    User:
+      type: object
+      required: [id, email, name, role]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        email: { $ref: "#/components/schemas/Email" }
+        name: { $ref: "#/components/schemas/PersonName" }
+        role: { $ref: "#/components/schemas/AccountRole" }
+        yaiId:
+          description: Family accounts only.
+          $ref: "#/components/schemas/Id"
+        createdAt: { $ref: "#/components/schemas/DateTime" }
+    UserPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    Session:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          examples: ["eyJhbGciOiJFZERTQSJ9.mock.token"]
+        expiresIn:
+          type: integer
+          description: Seconds.
+          examples: [900]
+        user: { $ref: "#/components/schemas/User" }
+    NextCursor:
+      type: [string, "null"]
+      description: Pass it as `cursor` to get the next page. `null` on the last page.
+      examples: [null]
+
+    # media
+    AssetKind:
+      type: string
+      enum:
+        - photo
+        - intro_video
+        - preview_clip
+        - recipe_video
+    Photo:
+      type: object
+      required: [assetId, alt, urls]
+      properties:
+        assetId: { $ref: "#/components/schemas/Id" }
+        alt:
+          type: string
+          maxLength: 200
+          examples: ["Yai stirring a pot of curry"]
+        urls:
+          type: object
+          required: [thumb, card, hero]
+          description: WebP at 400, 800 and 1600 pixels wide.
+          properties:
+            thumb:
+              type: string
+              format: uri
+              examples:
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/thumb.webp"
+            card:
+              type: string
+              format: uri
+              examples:
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/card.webp"
+            hero:
+              type: string
+              format: uri
+              examples:
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/hero.webp"
+    Video:
+      type: object
+      required: [assetId, url, posterUrl]
+      properties:
+        assetId: { $ref: "#/components/schemas/Id" }
+        url:
+          type: string
+          format: uri
+          examples:
+            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/video.mp4"
+        posterUrl:
+          type: string
+          format: uri
+          examples:
+            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/poster.webp"
+        durationSeconds: { type: integer, examples: [45] }
+    Upload:
+      type: object
+      required: [assetId, uploadUrl, headers, expiresAt]
+      properties:
+        assetId: { $ref: "#/components/schemas/Id" }
+        uploadUrl:
+          type: string
+          format: uri
+          description: Send the file here with HTTP PUT.
+          examples:
+            - "https://storage.yaiskitchen.example/uploads/6650a1f2c3d4e5f6a7b8c9d7?signature=mock"
+        headers:
+          type: object
+          description: Headers to send with the PUT.
+          additionalProperties: { type: string }
+          examples: [{ Content-Type: image/jpeg }]
+        expiresAt: { $ref: "#/components/schemas/DateTime" }
+    Asset:
+      type: object
+      required: [id, kind, status]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        kind: { $ref: "#/components/schemas/AssetKind" }
+        status:
+          type: string
+          enum:
+            - waiting_for_upload
+            - processing
+            - ready
+            - rejected
+        rejectReason:
+          type: string
+          examples: ["The file is not a real JPEG."]
+        photo: { $ref: "#/components/schemas/Photo" }
+        video: { $ref: "#/components/schemas/Video" }
+    SignedLink:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+          examples:
+            - "https://storage.yaiskitchen.example/recordings/6650a1f2c3d4e5f6a7b8c9d2.mp4?signature=mock"
+        expiresAt: { $ref: "#/components/schemas/DateTime" }
+
+    # catalog
+    YaiSummary:
+      type: object
+      required:
+        - id
+        - name
+        - nameThai
+        - region
+        - photo
+        - startingPrice
+        - isSample
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        name:
+          type: string
+          maxLength: 80
+          examples: ["Yai Somsri"]
+        nameThai:
+          type: string
+          maxLength: 80
+          examples: ["ยายสมศรี"]
+        region: { $ref: "#/components/schemas/Region" }
+        photo: { $ref: "#/components/schemas/Photo" }
+        startingPrice: { $ref: "#/components/schemas/Money" }
+        isSample:
+          type: boolean
+          description: True for made-up example Yais. The site shows a "Sample" label on them.
+          examples: [true]
+    Yai:
+      allOf:
+        - $ref: "#/components/schemas/YaiSummary"
+        - type: object
+          required:
+            - story
+            - photos
+            - classes
+            - isVisible
+            - isFeatured
+          properties:
+            story:
+              type: string
+              maxLength: 4000
+              examples:
+                - "Yai Somsri has cooked khao soi for her family in Chiang Mai for fifty years."
+            photos:
+              type: array
+              maxItems: 12
+              items: { $ref: "#/components/schemas/Photo" }
+            introVideo: { $ref: "#/components/schemas/Video" }
+            classes:
+              type: array
+              items: { $ref: "#/components/schemas/ClassSummary" }
+            isVisible: { type: boolean }
+            isFeatured: { type: boolean }
+    YaiPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/YaiSummary" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    YaiInput:
+      type: object
+      required:
+        - name
+        - nameThai
+        - region
+        - story
+        - photoAssetIds
+        - isSample
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        nameThai: { type: string, minLength: 1, maxLength: 80 }
+        region: { $ref: "#/components/schemas/Region" }
+        story: { type: string, minLength: 1, maxLength: 4000 }
+        photoAssetIds:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: { $ref: "#/components/schemas/Id" }
+        photoAlts:
+          type: array
+          maxItems: 12
+          items: { type: string, maxLength: 200 }
+        introVideoAssetId: { $ref: "#/components/schemas/Id" }
+        isSample: { type: boolean }
+        isVisible: { type: boolean, default: false }
+        isFeatured: { type: boolean, default: false }
+    YaiPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        nameThai: { type: string, minLength: 1, maxLength: 80 }
+        region: { $ref: "#/components/schemas/Region" }
+        story: { type: string, minLength: 1, maxLength: 4000 }
+        photoAssetIds:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: { $ref: "#/components/schemas/Id" }
+        photoAlts:
+          type: array
+          maxItems: 12
+          items: { type: string, maxLength: 200 }
+        introVideoAssetId: { $ref: "#/components/schemas/Id" }
+        isSample: { type: boolean }
+        isVisible: { type: boolean }
+        isFeatured: { type: boolean }
+    ClassSummary:
+      type: object
+      required:
+        - id
+        - yaiId
+        - yaiName
+        - dish
+        - dishThai
+        - price
+        - durationMinutes
+        - photo
+        - isSample
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        yaiName: { type: string, examples: ["Yai Somsri"] }
+        dish:
+          type: string
+          maxLength: 80
+          examples: ["Khao Soi"]
+        dishThai:
+          type: string
+          maxLength: 80
+          examples: ["ข้าวซอย"]
+        price:
+          description: Per person.
+          $ref: "#/components/schemas/Money"
+        durationMinutes:
+          type: integer
+          minimum: 30
+          maximum: 240
+          description: Each Yai sets her own.
+          examples: [90]
+        photo: { $ref: "#/components/schemas/Photo" }
+        isSample: { type: boolean, examples: [true] }
+    ClassDetail:
+      allOf:
+        - $ref: "#/components/schemas/ClassSummary"
+        - type: object
+          required:
+            - description
+            - maxGuests
+            - needsOwnKitchen
+            - isVisible
+            - isFeatured
+          properties:
+            description:
+              type: string
+              maxLength: 4000
+              examples:
+                - "A rich northern curry noodle soup with crispy noodles on top."
+            maxGuests: { $ref: "#/components/schemas/Guests" }
+            needsOwnKitchen:
+              type: boolean
+              const: true
+              description: Tourists cook in their own kitchen, so the page tells them before they pay.
+            previewClip: { $ref: "#/components/schemas/Video" }
+            isVisible: { type: boolean }
+            isFeatured: { type: boolean }
+    ClassPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ClassSummary" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    ClassInput:
+      type: object
+      required:
+        - yaiId
+        - dish
+        - dishThai
+        - description
+        - price
+        - durationMinutes
+        - maxGuests
+        - photoAssetId
+      additionalProperties: false
+      properties:
+        yaiId: { $ref: "#/components/schemas/Id" }
+        dish: { type: string, minLength: 1, maxLength: 80 }
+        dishThai: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, minLength: 1, maxLength: 4000 }
+        price: { $ref: "#/components/schemas/Money" }
+        durationMinutes: { type: integer, minimum: 30, maximum: 240 }
+        maxGuests: { $ref: "#/components/schemas/Guests" }
+        photoAssetId: { $ref: "#/components/schemas/Id" }
+        photoAlt: { type: string, maxLength: 200 }
+        previewClipAssetId: { $ref: "#/components/schemas/Id" }
+        isVisible: { type: boolean, default: false }
+        isFeatured: { type: boolean, default: false }
+    ClassPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        dish: { type: string, minLength: 1, maxLength: 80 }
+        dishThai: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, minLength: 1, maxLength: 4000 }
+        price: { $ref: "#/components/schemas/Money" }
+        durationMinutes: { type: integer, minimum: 30, maximum: 240 }
+        maxGuests: { $ref: "#/components/schemas/Guests" }
+        photoAssetId: { $ref: "#/components/schemas/Id" }
+        photoAlt: { type: string, maxLength: 200 }
+        previewClipAssetId: { $ref: "#/components/schemas/Id" }
+        isVisible: { type: boolean }
+        isFeatured: { type: boolean }
+    Ingredient:
+      type: object
+      required: [id, name, quantity]
+      properties:
+        id:
+          type: string
+          maxLength: 40
+          examples: ["egg-noodles"]
+        name:
+          type: string
+          maxLength: 80
+          examples: ["Fresh egg noodles"]
+        nameThai:
+          type: string
+          maxLength: 80
+          examples: ["บะหมี่ไข่"]
+        quantity:
+          type: string
+          maxLength: 40
+          examples: ["200 g"]
+    RecipeStep:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 1000
+          examples:
+            - "Fry the curry paste in coconut cream until it smells sweet."
+        video: { $ref: "#/components/schemas/Video" }
+    Recipe:
+      type: object
+      required: [classId, dish, dishThai, ingredients, steps]
+      properties:
+        classId: { $ref: "#/components/schemas/Id" }
+        dish: { type: string, examples: ["Khao Soi"] }
+        dishThai: { type: string, examples: ["ข้าวซอย"] }
+        ingredients:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/Ingredient" }
+        steps:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/RecipeStep" }
+        yaiNote:
+          type: string
+          maxLength: 1000
+          examples:
+            - "Don't rush the paste. My mother always said the smell tells you when."
+        yaiTip:
+          type: string
+          maxLength: 500
+          examples: ["Buy the noodles fresh on the day."]
+    RecipeInput:
+      type: object
+      required: [ingredients, steps]
+      additionalProperties: false
+      properties:
+        ingredients:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            required: [id, name, quantity]
+            additionalProperties: false
+            properties:
+              id: { type: string, pattern: "^[a-z0-9-]{1,40}$" }
+              name: { type: string, minLength: 1, maxLength: 80 }
+              nameThai: { type: string, maxLength: 80 }
+              quantity: { type: string, minLength: 1, maxLength: 40 }
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            required: [text]
+            additionalProperties: false
+            properties:
+              text: { type: string, minLength: 1, maxLength: 1000 }
+              videoAssetId: { $ref: "#/components/schemas/Id" }
+        yaiNote: { type: string, maxLength: 1000 }
+        yaiTip: { type: string, maxLength: 500 }
+    AvailableTime:
+      type: object
+      required: [id, yaiId, startsAt, endsAt, isUsed]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        startsAt: { $ref: "#/components/schemas/DateTime" }
+        endsAt: { $ref: "#/components/schemas/DateTime" }
+        isUsed:
+          type: boolean
+          description: True once Admin has made a class time from it.
+    AvailableTimePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AvailableTime" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    ClassTimeStatus:
+      type: string
+      enum: [draft, published, cancelled]
+    ClassTime:
+      type: object
+      required:
+        - id
+        - classId
+        - yaiId
+        - startsAt
+        - endsAt
+        - capacity
+        - helperId
+        - status
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        classId: { $ref: "#/components/schemas/Id" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        startsAt: { $ref: "#/components/schemas/DateTime" }
+        endsAt: { $ref: "#/components/schemas/DateTime" }
+        capacity: { $ref: "#/components/schemas/Guests" }
+        helperId:
+          oneOf:
+            - $ref: "#/components/schemas/Id"
+            - type: "null"
+        status: { $ref: "#/components/schemas/ClassTimeStatus" }
+    ClassTimePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ClassTime" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    ClassTimeContext:
+      type: object
+      required: [classTime, class, yai, ingredients]
+      properties:
+        classTime: { $ref: "#/components/schemas/ClassTime" }
+        class: { $ref: "#/components/schemas/ClassSummary" }
+        yai: { $ref: "#/components/schemas/YaiSummary" }
+        ingredients:
+          type: array
+          items: { $ref: "#/components/schemas/Ingredient" }
+    FaqGroupId:
+      type: string
+      enum:
+        - booking
+        - before_class
+        - during_class
+        - after_class
+        - becoming_a_yai
+    Faq:
+      type: object
+      required: [groups]
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [id, items]
+            additionalProperties: false
+            properties:
+              id: { $ref: "#/components/schemas/FaqGroupId" }
+              items:
+                type: array
+                maxItems: 30
+                items:
+                  type: object
+                  required: [question, answer]
+                  additionalProperties: false
+                  properties:
+                    question:
+                      type: string
+                      minLength: 1
+                      maxLength: 300
+                      examples: ["Do I need my own kitchen?"]
+                    answer:
+                      type: string
+                      minLength: 1
+                      maxLength: 3000
+                      examples:
+                        - "Yes. You cook along at home, so you need a stove and the ingredients on your shopping list."
+    ApplicationStage:
+      type: string
+      enum:
+        - received
+        - kitchen_visit
+        - trial_class
+        - approved
+        - declined
+    ApplicationInput:
+      type: object
+      required:
+        - yaiName
+        - contactName
+        - email
+        - phone
+        - region
+        - dishes
+        - consent
+      additionalProperties: false
+      properties:
+        yaiName: { type: string, minLength: 1, maxLength: 80 }
+        contactName: { $ref: "#/components/schemas/PersonName" }
+        email: { $ref: "#/components/schemas/Email" }
+        phone:
+          type: string
+          pattern: "^\\+?[0-9 ()-]{8,20}$"
+          examples: ["+66 81 234 5678"]
+        region: { $ref: "#/components/schemas/Region" }
+        dishes: { type: string, minLength: 1, maxLength: 1000 }
+        message: { type: string, maxLength: 2000 }
+        consent:
+          type: boolean
+          const: true
+          description: The family agrees that we store this application to contact them.
+    Application:
+      type: object
+      required:
+        - id
+        - stage
+        - yaiName
+        - contactName
+        - email
+        - phone
+        - region
+        - dishes
+        - createdAt
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        stage:
+          $ref: "#/components/schemas/ApplicationStage"
+        yaiName: { type: string, examples: ["Yai Malai"] }
+        contactName: { $ref: "#/components/schemas/PersonName" }
+        email: { $ref: "#/components/schemas/Email" }
+        phone:
+          type: string
+          examples: ["+66 81 234 5678"]
+        region: { $ref: "#/components/schemas/Region" }
+        dishes:
+          type: string
+          examples: ["Som tam, larb, sticky rice"]
+        message: { type: string }
+        notes: { type: string }
+        createdAt: { $ref: "#/components/schemas/DateTime" }
+    ApplicationPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Application" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+
+    # booking
+    BookableTime:
+      type: object
+      required: [classTimeId, startsAt, endsAt, seatsLeft]
+      properties:
+        classTimeId: { $ref: "#/components/schemas/Id" }
+        startsAt: { $ref: "#/components/schemas/DateTime" }
+        endsAt: { $ref: "#/components/schemas/DateTime" }
+        seatsLeft:
+          type: integer
+          minimum: 0
+          maximum: 6
+          examples: [4]
+    Hold:
+      type: object
+      required: [id, classTimeId, guests, total, expiresAt]
+      properties:
+        id:
+          type: string
+          examples: ["hold_9f1c2b7e4a5d4c3e8f00a1b2"]
+        classTimeId: { $ref: "#/components/schemas/Id" }
+        guests: { $ref: "#/components/schemas/Guests" }
+        total: { $ref: "#/components/schemas/Money" }
+        expiresAt: { $ref: "#/components/schemas/DateTime" }
+    BookingStatus:
+      type: string
+      enum:
+        - pending_payment
+        - confirmed
+        - completed
+        - cancelled
+        - expired
+    Booking:
+      type: object
+      required:
+        - id
+        - status
+        - userId
+        - guestName
+        - classTimeId
+        - class
+        - guests
+        - total
+        - startsAt
+        - endsAt
+        - joinOpensAt
+        - cancellableUntil
+        - checkedIngredientIds
+        - isRated
+        - createdAt
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        status: { $ref: "#/components/schemas/BookingStatus" }
+        userId: { $ref: "#/components/schemas/Id" }
+        guestName:
+          type: string
+          description: First name only when a family reads it.
+          examples: ["Alex"]
+        classTimeId: { $ref: "#/components/schemas/Id" }
+        class:
+          description: What the class looked like when it was booked.
+          $ref: "#/components/schemas/ClassSummary"
+        guests: { $ref: "#/components/schemas/Guests" }
+        total: { $ref: "#/components/schemas/Money" }
+        startsAt: { $ref: "#/components/schemas/DateTime" }
+        endsAt: { $ref: "#/components/schemas/DateTime" }
+        joinOpensAt:
+          description: 10 minutes before `startsAt`.
+          $ref: "#/components/schemas/DateTime"
+        cancellableUntil:
+          description: 48 hours before `startsAt`.
+          $ref: "#/components/schemas/DateTime"
+        checkedIngredientIds:
+          type: array
+          items: { type: string }
+          examples: [["egg-noodles"]]
+        isRated: { type: boolean }
+        createdAt: { $ref: "#/components/schemas/DateTime" }
+    BookingPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Booking" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    RatingHighlight:
+      type: string
+      enum:
+        - warm_yai
+        - clear_steps
+        - great_helper
+        - tasty_food
+        - good_video
+    RatingInput:
+      type: object
+      required: [stars]
+      additionalProperties: false
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        highlights:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/RatingHighlight" }
+        comment: { type: string, maxLength: 2000 }
+    Rating:
+      type: object
+      required:
+        - bookingId
+        - yaiId
+        - classId
+        - stars
+        - highlights
+        - createdAt
+      properties:
+        bookingId: { $ref: "#/components/schemas/Id" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        classId: { $ref: "#/components/schemas/Id" }
+        stars:
+          type: integer
+          minimum: 1
+          maximum: 5
+          examples: [5]
+        highlights:
+          type: array
+          items: { $ref: "#/components/schemas/RatingHighlight" }
+        comment:
+          type: string
+          examples:
+            - "She laughed at my noodles and then fixed them."
+        createdAt: { $ref: "#/components/schemas/DateTime" }
+    RatingPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Rating" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    Earnings:
+      type: object
+      required: [yaiId, groupBy, rows, total]
+      properties:
+        yaiId: { $ref: "#/components/schemas/Id" }
+        groupBy: { type: string, enum: [class, month] }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [key, label, bookings, yaiShare]
+            properties:
+              key:
+                type: string
+                description: A class ID or a month like 2026-11.
+                examples: ["2026-11"]
+              label: { type: string, examples: ["November 2026"] }
+              bookings: { type: integer, examples: [6] }
+              yaiShare:
+                description: 75% of what tourists paid.
+                $ref: "#/components/schemas/Money"
+        total: { $ref: "#/components/schemas/Money" }
+    Payout:
+      type: object
+      required:
+        - id
+        - yaiId
+        - periodStart
+        - periodEnd
+        - amount
+        - status
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        periodStart:
+          type: string
+          format: date
+          examples: ["2026-11-09"]
+        periodEnd:
+          type: string
+          format: date
+          examples: ["2026-11-15"]
+        amount: { $ref: "#/components/schemas/Money" }
+        status: { type: string, enum: [due, paid] }
+        paidAt: { $ref: "#/components/schemas/DateTime" }
+        reference:
+          type: string
+          examples: ["PP20261115-0042"]
+    PayoutPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Payout" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+
+    # payment
+    PaymentMethod:
+      type: string
+      enum: [card, promptpay]
+    PaymentStatus:
+      type: string
+      enum:
+        - requires_payment
+        - succeeded
+        - failed
+        - refunded
+    PaymentIntent:
+      type: object
+      required: [paymentId, clientSecret, amount, method]
+      properties:
+        paymentId: { $ref: "#/components/schemas/Id" }
+        clientSecret:
+          type: string
+          description: Give it to Stripe Elements. Never log it.
+          examples: ["pi_mock_secret_mock"]
+        amount: { $ref: "#/components/schemas/Money" }
+        method: { $ref: "#/components/schemas/PaymentMethod" }
+    Payment:
+      type: object
+      required:
+        - id
+        - bookingId
+        - status
+        - amount
+        - method
+        - createdAt
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        bookingId: { $ref: "#/components/schemas/Id" }
+        status: { $ref: "#/components/schemas/PaymentStatus" }
+        amount: { $ref: "#/components/schemas/Money" }
+        method: { $ref: "#/components/schemas/PaymentMethod" }
+        createdAt: { $ref: "#/components/schemas/DateTime" }
+        refundedAt: { $ref: "#/components/schemas/DateTime" }
+    PaymentPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Payment" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+
+    # live class
+    JoinTicket:
+      type: object
+      required:
+        - serverUrl
+        - token
+        - identity
+        - participantRole
+        - expiresAt
+      properties:
+        serverUrl:
+          type: string
+          format: uri
+          examples: ["wss://yaiskitchen.livekit.example"]
+        token:
+          type: string
+          description: LiveKit access token for this person and this call only.
+          examples: ["eyJhbGciOiJIUzI1NiJ9.mock.livekit"]
+        identity:
+          type: string
+          examples: ["tourist-6650a1f2c3d4e5f6a7b8c9d4"]
+        participantRole:
+          type: string
+          enum: [tourist, helper, yai, admin]
+        expiresAt: { $ref: "#/components/schemas/DateTime" }
+    LiveState:
+      type: object
+      required: [classTimeId, step, recording, endedAt]
+      properties:
+        classTimeId: { $ref: "#/components/schemas/Id" }
+        step:
+          type: object
+          required: [index, total]
+          properties:
+            index: { type: integer, minimum: 0, examples: [2] }
+            total: { type: integer, minimum: 1, examples: [7] }
+        recording:
+          type: object
+          required: [status, everyoneAgreed]
+          properties:
+            status:
+              type: string
+              enum: [off, recording, stopped]
+            everyoneAgreed: { type: boolean }
+        endedAt:
+          oneOf:
+            - $ref: "#/components/schemas/DateTime"
+            - type: "null"

@@ -11,9 +11,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . && prettier --check . && npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "test": "vitest run --passWithNoTests",
+    "mock": "npm run mock -w @yais-kitchen/api-spec",
     "prepare": "husky"
   },
   "devDependencies": {
