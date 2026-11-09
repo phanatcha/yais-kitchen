@@ -24,7 +24,7 @@ const config = loadConfig({
   EMAIL_FROM: { default: "Yai's Kitchen <hello@yais-kitchen.local>" },
   ADMIN_EMAIL: {},
   WEB_ORIGIN: { type: "url" },
-  // Until catalog is built, the mock server answers for it.
+  // When not set, the mock server answers for catalog.
   CATALOG_URL: { type: "url", optional: true },
   MOCK_URL: { type: "url", default: "http://127.0.0.1:4010" },
   INTERNAL_TOKEN: {},

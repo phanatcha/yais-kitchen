@@ -18,7 +18,7 @@ Sends every email the product sends. It has no API of its own: it listens for ev
 
 Dish and ingredient names also appear in Thai script, such as "Khao Soi (ข้าวซอย)", so a tourist can show them at a market. Times are Thai time.
 
-The Thai dish name and the shopping list come from catalog's `GET /internal/catalog/class-times/{classTimeId}`. Until catalog is built, the mock server answers. If catalog can't be reached on any of the 5 tries, the booking email goes out without the list, which is also on the Get Ready page.
+The Thai dish name and the shopping list come from catalog's `GET /internal/catalog/class-times/{classTimeId}`. Without `CATALOG_URL`, the mock server answers. If catalog can't be reached on any of the 5 tries, the booking email goes out without the list, which is also on the Get Ready page.
 
 ## How it stays right
 
@@ -84,7 +84,7 @@ The last one sends a sample of every event, and the emails appear at http://loca
 | `ADMIN_EMAIL`                | required                                   | Gets a note for each Become a Yai application          |
 | `WEB_ORIGIN`                 | required                                   | The web app, for links in emails                       |
 | `INTERNAL_TOKEN`             | required                                   | For catalog's internal API                             |
-| `CATALOG_URL`                | not set                                    | Catalog, once it exists. Until then, `MOCK_URL`.       |
+| `CATALOG_URL`                | not set                                    | Catalog. When not set, `MOCK_URL`.                     |
 | `MOCK_URL`                   | `http://127.0.0.1:4010`                    | The mock server                                        |
 | `REMINDER_CHECK_MS`          | `30000`                                    | How often to look for due reminders                    |
 | `PORT`                       | `3007`                                     | For `/health` and `/ready`                             |

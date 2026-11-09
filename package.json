@@ -17,6 +17,7 @@
     "mock": "npm run mock -w @yais-kitchen/api-spec",
     "gateway": "npm run dev -w @yais-kitchen/gateway",
     "auth": "npm run dev -w @yais-kitchen/auth",
+    "catalog": "npm run dev -w @yais-kitchen/catalog",
     "notification": "npm run dev -w @yais-kitchen/notification",
     "prepare": "husky"
   },
