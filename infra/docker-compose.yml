@@ -23,7 +23,8 @@ x-addresses: &addresses
 
 services:
   mongo:
-    image: mongo:8.0
+    # Not 8.x: it crashes on Linux kernel 6.19 and newer, which CI runners use.
+    image: mongo:7.0
     ports: ["127.0.0.1:27017:27017"]
     volumes: [mongo:/data/db]
     healthcheck:

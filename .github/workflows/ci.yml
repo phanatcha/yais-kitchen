@@ -18,7 +18,8 @@ jobs:
           --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
           --health-interval 5s --health-timeout 10s --health-retries 30
       mongo:
-        image: mongo:8.0
+        # Not 8.x: it crashes on the runners' Linux kernel (6.19 and newer).
+        image: mongo:7.0
         ports: ["27017:27017"]
         options: >-
           --health-cmd "mongosh --quiet --eval 'db.adminCommand(1)'"
