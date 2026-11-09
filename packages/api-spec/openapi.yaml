@@ -350,7 +350,12 @@ paths:
       tags: [Catalog]
       operationId: getYai
       summary: A Yai's profile and her classes
-      security: []
+      description: |
+        Public. A hidden Yai answers 404, except to Admin. `classes` lists her
+        visible classes, or all of them for Admin.
+      security:
+        - {}
+        - bearerAuth: []
       x-roles: []
       x-requirements: [FR-04]
       responses:
@@ -452,7 +457,12 @@ paths:
       tags: [Catalog]
       operationId: getClass
       summary: Class detail
-      security: []
+      description: |
+        Public. A hidden class, or a class of a hidden Yai, answers 404 except
+        to Admin.
+      security:
+        - {}
+        - bearerAuth: []
       x-roles: []
       x-requirements: [FR-06]
       responses:
@@ -493,8 +503,11 @@ paths:
       summary: The recipe card and shopping list
       description: |
         Public for now. Get Ready uses `ingredients` as the shopping checklist,
-        and After Class shows the whole card.
-      security: []
+        and After Class shows the whole card. 404 until the recipe is written,
+        and for a hidden class except to Admin.
+      security:
+        - {}
+        - bearerAuth: []
       x-roles: []
       x-requirements: [FR-12, FR-13, FR-20]
       responses:
@@ -533,7 +546,9 @@ paths:
       tags: [Catalog]
       operationId: listAvailableTimes
       summary: When the Yai can teach
-      description: A family can only see their own Yai.
+      description: |
+        A family can only see their own Yai. Sorted by start time, from `from`
+        (now by default).
       x-roles: [family, admin]
       x-requirements: [FR-34]
       parameters:
@@ -548,12 +563,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AvailableTimePage"
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Catalog]
       operationId: addAvailableTime
       summary: Add a time the Yai can teach
+      description: |
+        The time must start in the future, end after it starts, last at most
+        8 hours, and not overlap another time of the same Yai (409
+        `time_overlaps`).
       x-roles: [family, admin]
       x-requirements: [FR-34]
       requestBody:
@@ -576,6 +596,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
   /catalog/yais/{yaiId}/available-times/{availableTimeId}:
@@ -589,7 +610,9 @@ paths:
       tags: [Catalog]
       operationId: deleteAvailableTime
       summary: Remove a time the Yai can no longer teach
-      description: Not allowed once Admin has turned it into a class time.
+      description: |
+        Not allowed once Admin has turned it into a class time (409
+        `time_in_use`), even if that class time was cancelled.
       x-roles: [family, admin]
       x-requirements: [FR-34]
       responses:
@@ -627,6 +650,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ClassTimePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
@@ -635,7 +659,13 @@ paths:
       summary: Turn an available time into a class time
       description: |
         The class time stays a draft until it has a helper. Then it is
-        published and tourists can book it.
+        published and tourists can book it. It starts when the available
+        time starts and lasts as long as the class. Each available time makes
+        one class time (409 `time_in_use`). It must not have started (409
+        `time_passed`), and the class must fit inside it (409
+        `time_too_short`). A class or available time that doesn't exist, or a
+        time of another Yai, is 400. Catalog can't check `helperId`, so the
+        admin pages pick it from `GET /auth/users?role=helper`.
       x-roles: [admin]
       x-requirements: [FR-28]
       requestBody:
@@ -670,7 +700,10 @@ paths:
       summary: Assign a helper or cancel a class time
       description: |
         Setting `status: cancelled` sends `class_time.cancelled`, and booking
-        cancels and refunds every booking for it.
+        cancels and refunds every booking for it. Send `helperId` or `status`,
+        not both. A cancelled class time can't change (409
+        `class_time_cancelled`), and neither can one that has started (409
+        `class_started`).
       x-roles: [admin]
       x-requirements: [FR-28]
       requestBody:
@@ -765,6 +798,7 @@ paths:
       tags: [Catalog]
       operationId: listApplications
       summary: Become a Yai applications
+      description: Newest first.
       x-roles: [admin]
       x-requirements: [FR-29]
       parameters:
@@ -780,6 +814,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApplicationPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -793,6 +828,10 @@ paths:
       tags: [Catalog]
       operationId: updateApplication
       summary: Move an application to its next stage
+      description: |
+        Stages go received, kitchen_visit, trial_class, then approved. Any
+        stage before the end can go to declined. Anything else is 409
+        `stage_not_allowed`. `notes` can change at any stage.
       x-roles: [admin]
       x-requirements: [FR-29]
       requestBody:
@@ -817,6 +856,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   # ------------------------------------------------------------- booking
   /booking/class-times:
@@ -2004,6 +2044,10 @@ components:
         - preview_clip
         - recipe_video
     Photo:
+      description: |
+        Catalog keeps only the asset ID and builds the links from media's
+        public address: `{MEDIA_PUBLIC_URL}/{assetId}/thumb.webp`, `card.webp`
+        and `hero.webp`. Media must store ready photos at those paths.
       type: object
       required: [assetId, alt, urls]
       properties:
@@ -2033,6 +2077,10 @@ components:
               examples:
                 - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/hero.webp"
     Video:
+      description: |
+        Catalog keeps only the asset ID and builds the links from media's
+        public address: `{MEDIA_PUBLIC_URL}/{assetId}/video.mp4` and
+        `poster.webp`. Media must store ready videos at those paths.
       type: object
       required: [assetId, url, posterUrl]
       properties:
@@ -2117,7 +2165,11 @@ components:
           examples: ["ยายสมศรี"]
         region: { $ref: "#/components/schemas/Region" }
         photo: { $ref: "#/components/schemas/Photo" }
-        startingPrice: { $ref: "#/components/schemas/Money" }
+        startingPrice:
+          description: |
+            The lowest price of her visible classes. 0 while she has none, and
+            then the site shows no price.
+          $ref: "#/components/schemas/Money"
         isSample:
           type: boolean
           description: True for made-up example Yais. The site shows a "Sample" label on them.
