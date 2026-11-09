@@ -2,9 +2,8 @@
 // set. Stop any notification service you have running first, or it sends the
 // same emails too. For example:
 //
-//   docker run --rm -d --name yk-rabbit --user rabbitmq -p 127.0.0.1:5672:5672 rabbitmq:4-alpine
-//   docker run --rm -d --name yk-mongo -p 127.0.0.1:27017:27017 mongo:8
-//   docker run --rm -d --name yk-mailpit -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 axllent/mailpit
+//   npm run up
+//   docker compose -f infra/docker-compose.yml stop notification
 //   RABBITMQ_URL=amqp://guest:guest@127.0.0.1:5672 MONGO_URL=mongodb://127.0.0.1:27017 \
 //     MAILPIT_URL=http://127.0.0.1:8025 npm test
 import { randomUUID } from "node:crypto";

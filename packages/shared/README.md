@@ -106,13 +106,13 @@ await events.publish("application.received", { applicationId, email });
 
 From the repo root:
 
-| Command                                                                            | What it does                                                   |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `npm test`                                                                         | Runs every test. The RabbitMQ test is skipped.                 |
-| `RABBITMQ_URL=amqp://guest:guest@localhost:5672 npm test`                          | Also runs the RabbitMQ test, against the broker from `infra/`. |
-| `AUTH_PUBLIC_KEY="$(cat auth-public.pem)" npm run example -w @yais-kitchen/shared` | Runs the example service on port 3099.                         |
+| Command                                                                            | What it does                                                       |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `npm test`                                                                         | Runs every test. The RabbitMQ test is skipped.                     |
+| `RABBITMQ_URL=amqp://guest:guest@localhost:5672 npm test`                          | Also runs the RabbitMQ test, against the broker from `npm run up`. |
+| `AUTH_PUBLIC_KEY="$(cat auth-public.pem)" npm run example -w @yais-kitchen/shared` | Runs the example service on port 3099.                             |
 
-To make a key pair for running locally:
+`npm run setup` puts a key pair in `.env` for you. To make one as files instead:
 
 ```bash
 openssl genpkey -algorithm ed25519 -out auth-private.pem

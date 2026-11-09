@@ -12,6 +12,33 @@ Everything tourists browse (Yais, classes, recipes, the FAQ), the times each Yai
 | Admin   | Adds, edits, shows and hides Yais and classes, writes recipes and the FAQ, makes class times, assigns helpers, cancels class times, and moves applications along |
 | Booking | Reads published class times and one class time with its class, Yai and shopping list (`/internal`, with `X-Internal-Token`)                                      |
 
+## Endpoints
+
+Paths as the gateway shows them, under `/api`. `openapi.yaml` has every field and answer.
+
+| Endpoint                                                    | Who                   | What                                                 |
+| ----------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
+| `GET /catalog/yais`                                         | Anyone                | Browse and search Yais                               |
+| `GET /catalog/yais/{yaiId}`                                 | Anyone                | A Yai's profile and her classes                      |
+| `POST /catalog/yais`, `PATCH /catalog/yais/{yaiId}`         | Admin                 | Add, edit, show or hide a Yai                        |
+| `GET /catalog/classes`                                      | Anyone                | Browse and search classes                            |
+| `GET /catalog/classes/{classId}`                            | Anyone                | Class detail                                         |
+| `POST /catalog/classes`, `PATCH /catalog/classes/{classId}` | Admin                 | Add, edit, show or hide a class                      |
+| `GET /catalog/classes/{classId}/recipe`                     | Anyone                | The recipe card and shopping list                    |
+| `PUT /catalog/classes/{classId}/recipe`                     | Admin                 | Write the recipe                                     |
+| `GET`, `POST /catalog/yais/{yaiId}/available-times`         | Family, Admin         | When the Yai can teach, and adding a time            |
+| `DELETE /catalog/yais/{yaiId}/available-times/{id}`         | Family, Admin         | Remove a time                                        |
+| `GET /catalog/class-times`                                  | Admin, Helper, Family | Class times each of them may see                     |
+| `POST /catalog/class-times`                                 | Admin                 | Make a class time from an available time             |
+| `PATCH /catalog/class-times/{classTimeId}`                  | Admin                 | Assign a helper or cancel                            |
+| `GET /catalog/faq`, `PUT /catalog/faq`                      | Anyone, Admin         | Read and edit the FAQ                                |
+| `POST /catalog/applications`                                | Anyone                | Apply to become a Yai                                |
+| `GET /catalog/applications`, `PATCH .../{applicationId}`    | Admin                 | List applications and move them along                |
+| `GET /internal/catalog/class-times`                         | Booking               | Published class times of one class                   |
+| `GET /internal/catalog/class-times/{classTimeId}`           | Booking, Notification | One class time with its class, Yai and shopping list |
+
+The two `/internal` paths need `X-Internal-Token` and are never reachable through the gateway.
+
 ## Rules worth knowing
 
 - **Hidden things.** A hidden Yai or class answers 404 to everyone but Admin. A class of a hidden Yai is hidden too. Admin sees hidden ones in lists with `includeHidden=true`.
@@ -40,13 +67,13 @@ In the `catalog` database: `yais`, `classes` (each with its recipe), `available_
 
 ## Run it
 
-With RabbitMQ and MongoDB running (see `services/notification/README.md`) and the root `.env` filled in:
+`npm run up` starts it with everything else (see `infra/README.md`). To work on catalog itself, stop its container with `docker compose -f infra/docker-compose.yml stop catalog`, then:
 
 ```bash
 npm run catalog
 ```
 
-It listens on port 3002. Set `CATALOG_URL=http://127.0.0.1:3002` for the gateway and notification, so they use it instead of the mock server.
+It listens on port 3002 and reads the root `.env`. Set `CATALOG_URL=http://127.0.0.1:3002` for a gateway or notification you run with npm, so they use it instead of the mock server.
 
 To fill an empty catalog with three sample Yais, their classes and an FAQ:
 
