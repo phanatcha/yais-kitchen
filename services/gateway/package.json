@@ -1,0 +1,19 @@
+{
+  "name": "@yais-kitchen/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --env-file-if-exists=../../.env --watch src/server.js",
+    "token": "node --env-file-if-exists=../../.env scripts/dev-token.js"
+  },
+  "dependencies": {
+    "@yais-kitchen/api-spec": "^0.1.0",
+    "@yais-kitchen/shared": "^0.1.0",
+    "jose": "^6.2.16"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.2"
+  }
+}

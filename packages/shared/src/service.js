@@ -81,18 +81,21 @@ function keepRawBody(req, res, body) {
 /**
  * Builds the Express app every service starts from. In order: security
  * headers, a request ID, `/health` and `/ready`, one log line per request,
- * JSON bodies up to `bodyLimit`, the spec validator, the spec's token and
- * role rules, the service's own routes, and errors in the spec's format.
+ * any `before` middleware, JSON bodies up to `bodyLimit`, the spec validator,
+ * the spec's token and role rules, the service's own routes, and errors in
+ * the spec's format.
  *
  * @param {object} options
  * @param {string} options.service Name used in logs and `/health`.
  * @param {import("pino").Logger} options.logger
- * @param {import("express").RequestHandler} [options.routes] Usually an express.Router().
+ * @param {import("express").RequestHandler | import("express").RequestHandler[]} [options.routes] Usually an express.Router().
  * @param {{ verifyToken?: Function, internalToken?: string }} [options.auth]
  * @param {Record<string, () => unknown>} [options.ready] Checks for `/ready`. Each may return false or throw to fail.
  * @param {object} [options.spec] From loadApiSpec(). Pass false to turn the validator off.
  * @param {boolean} [options.validateResponses] Turn on in tests.
  * @param {string} [options.bodyLimit]
+ * @param {import("express").RequestHandler[]} [options.before] Runs before the body is read and checked, such as CORS.
+ * @param {boolean | number | string} [options.trustProxy] Express's "trust proxy", so `req.ip` is the caller's address behind a proxy.
  */
 export function createApp({
   service,
@@ -104,9 +107,12 @@ export function createApp({
   validateResponses = false,
   bodyLimit = "100kb",
   readyTimeoutMs = 2000,
+  before = [],
+  trustProxy = false,
 }) {
   const app = express();
   app.disable("x-powered-by");
+  app.set("trust proxy", trustProxy);
   app.locals.stopping = false;
 
   app.use(helmet());
@@ -118,6 +124,7 @@ export function createApp({
   app.get("/ready", readiness(ready, readyTimeoutMs));
 
   app.use(logRequests(logger));
+  for (const middleware of before) app.use(middleware);
   app.use(
     express.json({
       limit: bodyLimit,

@@ -68,6 +68,13 @@ await startService({ app, port: config.PORT, logger, onStop: events.close });
 - Routes use the spec's paths without `/api`, such as `/catalog/yais`. The gateway takes `/api` off.
 - A path or field that isn't in `openapi.yaml` gets a 404 or 400. Change the spec first, then the route.
 - Don't check roles in routes: `x-roles` in the spec already does. Do check ownership in the route, for example that a family only sees its own Yai.
+- Who may call what comes from each operation's `security` in the spec:
+  - `[]` is open to anyone.
+  - `[{}, { bearerAuth: [] }]` is open too, but a token that is sent is checked, so the route sees `req.user` (an admin asking for hidden Yais, say).
+  - `bearerAuth` needs a valid token with a role from `x-roles`. No token gets 401, the wrong role 403.
+  - `internalToken` needs `X-Internal-Token`. `refreshCookie` is passed on, because auth checks that cookie itself.
+  - A request the spec doesn't match is refused with 404, never let through unchecked.
+- `createApp` also takes `before`, middleware that runs ahead of the body parser (the gateway's CORS), and `trustProxy`, the number of proxies in front, so `req.ip` is the real caller.
 - `/health` says the process is up. `/ready` says it can do its job; pass a check for each database or broker it needs.
 - Throw the errors from `errors.js` so the user gets a clear message. Never put internal details in a message.
 - Log with `logger` and never log sign-in codes, tokens or passwords.
