@@ -60,6 +60,7 @@ await startService({ app, port: config.PORT, logger, onStop: events.close });
 | `HttpError`, `badRequest`, `notFound`, `conflict`, …   | Errors to throw from routes. Anything else becomes a 500 with a safe message, and the stack goes only to the logs.                                                       |
 | `createTokenVerifier`, `requireAuth`, `requireRole`    | Check auth's Ed25519 tokens with jose. `createApp` already applies them from the spec, so routes rarely need them.                                                       |
 | `requireInternalToken`                                 | Checks `X-Internal-Token` on calls between services.                                                                                                                     |
+| `createEventChecker`                                   | Checks an event against its message in `asyncapi.yaml`. `connectEvents` already uses it.                                                                                 |
 | `connectEvents`                                        | Publishes and consumes events on RabbitMQ, reconnects by itself, retries failed events and dead-letters them after 5 tries.                                              |
 | `createTestKeys` (from `@yais-kitchen/shared/testing`) | A throwaway key pair for tests, to sign tokens the way auth does.                                                                                                        |
 
@@ -95,6 +96,8 @@ await events.publish("application.received", { applicationId, email });
 - Call `consume` once per service with every handler. The service reads from its own queue, named after the service.
 - An event can arrive twice. Save `event.id` and skip one you have already handled.
 - If a handler throws, the event comes back after 5, 10, 20 and 40 seconds. After the 5th failure it goes to `yais.events.dead`, with the error in its `x-error` header.
+- If trying again can't help, throw an error with `retryable: false` (any 4xx `HttpError`, such as `badRequest()`). The event goes straight to the dead-letter queue.
+- Every event is checked against `asyncapi.yaml`, the way requests are checked against `openapi.yaml`. `publish` throws an `EventSpecError` for one that doesn't match, so the bug shows up in the sender's tests. A received event that doesn't match goes straight to the dead-letter queue, and `consume` refuses a type the spec doesn't have. Tests with made-up events pass `eventSpec: null`.
 - `publish` resolves once RabbitMQ has the event. If the broker is down it throws a 503, so the caller can try again.
 - Inside a request, the request ID travels with the event, so one ID links the logs of every service it touched.
 

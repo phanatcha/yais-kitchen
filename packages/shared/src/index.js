@@ -21,6 +21,12 @@ export {
   unauthorized,
 } from "./errors.js";
 export {
+  createEventChecker,
+  EVENT_SPEC_PATH,
+  EventSpecError,
+  loadEventSpec,
+} from "./event-spec.js";
+export {
   connectEvents,
   DEAD_LETTER_QUEUE,
   EXCHANGE,
