@@ -55,4 +55,3 @@ npm test
 | `packages/shared`       | Code every service uses                                    |
 | `infra`                 | Docker Compose, the setup script, the stack test           |
 | `docs`                  | Guides that span services                                  |
-
