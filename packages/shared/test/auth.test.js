@@ -184,6 +184,12 @@ describe("the spec's rules, applied by createApp", () => {
     routes.get("/internal/catalog/class-times", (req, res) =>
       res.json({ items: [] }),
     );
+    routes.get("/catalog/yais", (req, res) =>
+      res.json({ role: req.user?.role ?? null }),
+    );
+    routes.post("/auth/sessions/refresh", (req, res) =>
+      res.json({ cookie: req.get("cookie") ?? null }),
+    );
     return createApp({ service: "test", logger, routes, spec, auth });
   }
 
@@ -236,6 +242,43 @@ describe("the spec's rules, applied by createApp", () => {
       .get(path)
       .set("x-internal-token", INTERNAL_TOKEN);
     expect(internal.status).toBe(200);
+  });
+
+  it("checks a token on public operations that read one, if it is sent", async () => {
+    const anonymous = await request(app()).get("/catalog/yais");
+    expect(anonymous.status).toBe(200);
+    expect(anonymous.body.role).toBeNull();
+
+    const admin = await request(app())
+      .get("/catalog/yais")
+      .set("authorization", await as("admin"));
+    expect(admin.body.role).toBe("admin");
+
+    const broken = await request(app())
+      .get("/catalog/yais")
+      .set("authorization", "Bearer not.a.token");
+    expect(broken.status).toBe(401);
+  });
+
+  it("leaves the refresh cookie for the route to check", async () => {
+    const res = await request(app())
+      .post("/auth/sessions/refresh")
+      .set("cookie", "yk_refresh=abc");
+    expect(res.status).toBe(200);
+    expect(res.body.cookie).toBe("yk_refresh=abc");
+  });
+
+  it("understands every security rule the spec uses", () => {
+    const known = new Set(["bearerAuth", "internalToken", "refreshCookie"]);
+    for (const item of Object.values(spec.paths)) {
+      for (const operation of Object.values(item)) {
+        for (const rule of operation.security ?? []) {
+          for (const scheme of Object.keys(rule)) {
+            expect(known, operation.operationId).toContain(scheme);
+          }
+        }
+      }
+    }
   });
 
   it("refuses everything that needs a sign-in when no keys are set up", async () => {

@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "test": "vitest run --passWithNoTests",
     "mock": "npm run mock -w @yais-kitchen/api-spec",
+    "gateway": "npm run dev -w @yais-kitchen/gateway",
     "prepare": "husky"
   },
   "devDependencies": {

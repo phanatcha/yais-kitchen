@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { importSPKI, jwtVerify } from "jose";
-import { forbidden, unauthorized } from "./errors.js";
+import { forbidden, notFound, unauthorized } from "./errors.js";
 
 export const ROLES = Object.freeze([
   "guest",
@@ -110,8 +110,12 @@ export function requireInternalToken(secret) {
 
 /**
  * Applies the spec's rules to every request the spec validator matched:
- * `security: []` is public, `internalToken` needs the internal token, and
- * `bearerAuth` needs a token whose role is in the operation's `x-roles`.
+ * - `security: []` is public.
+ * - `security: [{}, { bearerAuth: [] }]` is public, but a token is checked
+ *   if one is sent, so the route can see `req.user` (an admin, say).
+ * - `internalToken` needs the internal token.
+ * - `refreshCookie` is let through, because auth checks that cookie itself.
+ * - `bearerAuth` needs a token whose role is in the operation's `x-roles`.
  * A service never has to remember a check, and the spec stays the one place
  * that says who may call what.
  * @param {{ verifyToken?: (token: string) => Promise<User>, internalToken?: string }} options
@@ -124,14 +128,20 @@ export function authorizeFromSpec({ verifyToken, internalToken } = {}) {
     : deny;
 
   return function checkSpecRules(req, res, next) {
+    // The validator leaves alone paths outside the spec's base path (the
+    // gateway's `/api`). Those are refused, never let through unchecked.
     const operation = req.openapi?.schema;
-    if (!operation) return next();
+    if (!operation) return next(notFound());
 
     const security = operation.security ?? [];
+    const uses = (scheme) => security.some((rule) => scheme in rule);
     if (security.length === 0) return next();
-    if (security.some((rule) => "internalToken" in rule)) {
-      return checkInternal(req, res, next);
+    if (security.some((rule) => Object.keys(rule).length === 0)) {
+      const sentToken = uses("bearerAuth") && req.get("authorization");
+      return sentToken ? checkToken(req, res, next) : next();
     }
+    if (uses("internalToken")) return checkInternal(req, res, next);
+    if (uses("refreshCookie")) return next();
 
     const checkRole = requireRole(...(operation["x-roles"] ?? []));
     checkToken(req, res, (error) => {
