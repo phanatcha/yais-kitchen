@@ -15,17 +15,15 @@ The one address the web app calls. It checks every request against the spec, the
 
 ## Run it
 
-Services that aren't built yet have no URL, so their paths go to the mock server. Start both:
+`npm run up` starts it with everything else (see `infra/README.md`). There it sends auth and catalog paths to their containers, and the rest to the mock server.
 
-```bash
-npm run mock
-```
+To work on the gateway itself, stop its container with `docker compose -f infra/docker-compose.yml stop gateway`, then:
 
 ```bash
 npm run gateway
 ```
 
-The gateway listens on http://localhost:8080 and reads the root `.env`.
+It listens on http://localhost:8080 and reads the root `.env`. Services without a URL there go to the mock server at `MOCK_URL`, which the stack also runs.
 
 ## Environment
 
@@ -42,7 +40,7 @@ The gateway listens on http://localhost:8080 and reads the root `.env`.
 
 ## Tokens for trying things out
 
-With `AUTH_URL` set and auth running, sign in the real way: ask for a code, read it in Mailpit, and send it to `/api/auth/sessions`. To skip that, sign a token for any role with your local private key (`AUTH_PRIVATE_KEY` in `.env`, made with the `openssl` commands in `packages/shared/README.md`):
+With `AUTH_URL` set and auth running, sign in the real way: ask for a code, read it in Mailpit, and send it to `/api/auth/sessions`. To skip that, sign a token for any role with your local private key (`AUTH_PRIVATE_KEY` in `.env`, made by `npm run setup`):
 
 ```bash
 npm run token -w @yais-kitchen/gateway -- tourist

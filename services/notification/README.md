@@ -42,35 +42,19 @@ In the `notification` database. Each collection deletes old entries by itself.
 
 ## Run it
 
-Until `infra/` has a Docker Compose file, start RabbitMQ, MongoDB and Mailpit by hand:
-
-```bash
-docker run --rm -d --name yk-rabbit --user rabbitmq -p 127.0.0.1:5672:5672 rabbitmq:4-alpine
-```
-
-```bash
-docker run --rm -d --name yk-mongo -p 127.0.0.1:27017:27017 mongo:8
-```
-
-```bash
-docker run --rm -d --name yk-mailpit -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 axllent/mailpit
-```
-
-Then, each in its own terminal, with the root `.env` filled in:
-
-```bash
-npm run mock
-```
+`npm run up` starts it with everything else (see `infra/README.md`). To work on notification itself, stop its container with `docker compose -f infra/docker-compose.yml stop notification`, then:
 
 ```bash
 npm run notification
 ```
 
+To see every email without going through the other services, send sample events from another terminal:
+
 ```bash
 npm run send-sample -w @yais-kitchen/notification
 ```
 
-The last one sends a sample of every event, and the emails appear at http://localhost:8025. Name an event to send just that one, such as `-- booking.confirmed`.
+It sends a sample of every event, and the emails appear at http://localhost:8025. Name an event to send just that one, such as `-- booking.confirmed`.
 
 ## Environment
 
@@ -102,7 +86,7 @@ The last one sends a sample of every event, and the emails appear at http://loca
 
 `npm test` runs them with a MongoDB in memory. The first run downloads MongoDB, which takes a while.
 
-`test/notification.e2e.test.js` goes through real RabbitMQ, MongoDB and Mailpit, and runs only when all three are set. Stop the notification service first, or it sends the same emails too:
+`test/notification.e2e.test.js` goes through real RabbitMQ, MongoDB and Mailpit, and runs only when all three are set. Stop the notification service first, or it sends the same emails too. With `npm run up` running, that is `docker compose -f infra/docker-compose.yml stop notification`, then:
 
 ```bash
 RABBITMQ_URL=amqp://guest:guest@127.0.0.1:5672 MONGO_URL=mongodb://127.0.0.1:27017 MAILPIT_URL=http://127.0.0.1:8025 npm test

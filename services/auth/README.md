@@ -17,6 +17,31 @@ A 401 from step 2 says why in `error.code`:
 | `code_expired` | More than 10 minutes since it was sent      | Asks for a new code  |
 | `code_locked`  | 5 wrong tries in a row on this code         | Asks for a new code  |
 
+## Endpoints
+
+Paths as the gateway shows them, under `/api`. `openapi.yaml` has every field and answer.
+
+| Endpoint                        | Who                    | What                                       |
+| ------------------------------- | ---------------------- | ------------------------------------------ |
+| `POST /auth/codes`              | Anyone                 | Email a sign-in code                       |
+| `POST /auth/sessions`           | Anyone                 | Sign in with the code                      |
+| `POST /auth/sessions/refresh`   | Anyone with the cookie | New access token and cookie                |
+| `DELETE /auth/sessions/current` | Anyone with the cookie | Sign out on this device                    |
+| `POST /auth/guest-sessions`     | Anyone                 | A guest token for checkout                 |
+| `GET /auth/me`                  | Signed in, not guests  | The signed-in account                      |
+| `DELETE /auth/me`               | Tourist                | Delete the account and everything about it |
+| `GET /auth/users`               | Admin                  | List accounts, such as every helper        |
+| `POST /auth/users`              | Admin                  | Make a family, helper or admin account     |
+
+## Events
+
+Auth sends these and receives none.
+
+| Event                 | When                             | Who listens                                     |
+| --------------------- | -------------------------------- | ----------------------------------------------- |
+| `auth.code_requested` | Someone asked for a sign-in code | Notification                                    |
+| `user.deleted`        | A tourist deleted their account  | Every service that keeps something about people |
+
 ## Tokens
 
 Access tokens are Ed25519 JWTs with `sub`, `role`, `email`, `name`, and `yaiId` for family accounts. Roles are `tourist`, `family`, `helper` and `admin`.
@@ -57,13 +82,13 @@ In the `auth` database.
 
 ## Run it
 
-With RabbitMQ and MongoDB running (see `services/notification/README.md`) and the root `.env` filled in:
+`npm run up` starts it with everything else (see `infra/README.md`). To work on auth itself, stop its container with `docker compose -f infra/docker-compose.yml stop auth`, then:
 
 ```bash
 npm run auth
 ```
 
-It listens on port 3001. To send the web app's auth calls to it, set `AUTH_URL=http://127.0.0.1:3001` for the gateway. Start notification too, and the codes arrive in Mailpit at http://localhost:8025.
+It listens on port 3001 and reads the root `.env`. The gateway in Docker still sends auth calls to its own container, so call this one straight on port 3001, or run the gateway with `npm run gateway` and `AUTH_URL=http://127.0.0.1:3001`. Codes arrive in Mailpit at http://localhost:8025.
 
 ## Environment
 

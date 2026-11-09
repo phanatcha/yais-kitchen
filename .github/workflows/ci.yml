@@ -6,8 +6,30 @@ on:
     branches: [main]
 
 jobs:
+  # Lint and every test, with a real RabbitMQ, MongoDB and Mailpit so the
+  # tests that need them run too.
   check:
     runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:4.2-alpine
+        ports: ["5672:5672"]
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
+          --health-interval 5s --health-timeout 10s --health-retries 30
+      mongo:
+        image: mongo:8.0
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(1)'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      mailpit:
+        image: axllent/mailpit:v1.32
+        ports: ["1025:1025", "8025:8025"]
+    env:
+      RABBITMQ_URL: amqp://guest:guest@127.0.0.1:5672
+      MONGO_URL: mongodb://127.0.0.1:27017
+      MAILPIT_URL: http://127.0.0.1:8025
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -17,3 +39,25 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+
+  # Starts everything with docker compose, the way a new teammate does, and
+  # checks it through the gateway.
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run up
+      - run: npx vitest run infra
+        env:
+          GATEWAY_URL: http://127.0.0.1:8080
+          MAILPIT_URL: http://127.0.0.1:8025
+      - if: failure()
+        run: docker compose -f infra/docker-compose.yml logs
+      - if: always()
+        run: npm run down

@@ -1,0 +1,140 @@
+# Everything the back end needs, on one machine. From the repo root:
+#   npm run setup     (once: makes .env with keys)
+#   npm run up        (docker compose up, then waits until all is ready)
+# Ports are open on this machine only. infra/README.md has the details.
+
+name: yais-kitchen
+
+x-service: &service
+  env_file: ../.env
+  restart: unless-stopped
+  depends_on: &needs
+    mongo:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
+# The same for every service: inside the network they use these names, not
+# localhost. Anything set here wins over .env.
+x-addresses: &addresses
+  MONGO_URL: mongodb://mongo:27017
+  RABBITMQ_URL: amqp://rabbitmq:5672
+  MOCK_URL: http://mock:4010
+
+services:
+  mongo:
+    image: mongo:8.0
+    ports: ["127.0.0.1:27017:27017"]
+    volumes: [mongo:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    # 15672 is the RabbitMQ web page, user and password guest.
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  # Catches every email. Read them at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.32
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+
+  # Answers for services that aren't built yet, from the API spec.
+  mock:
+    image: stoplight/prism:5.15.10
+    # One process: the default forks and crashes in this image.
+    command: mock --multiprocess=false -h 0.0.0.0 -p 4010 /spec/openapi.yaml
+    volumes: ["../packages/api-spec:/spec:ro"]
+    ports: ["127.0.0.1:4010:4010"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4010/catalog/faq').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  auth:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: auth }
+    environment:
+      <<: *addresses
+    ports: ["127.0.0.1:3001:3001"]
+    healthcheck: &ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  catalog:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: catalog }
+    environment:
+      <<: *addresses
+    ports: ["127.0.0.1:3002:3002"]
+    healthcheck:
+      <<: *ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3002/ready"]
+
+  notification:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: notification }
+    environment:
+      <<: *addresses
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      CATALOG_URL: http://catalog:3002
+    depends_on:
+      <<: *needs
+      mailpit:
+        condition: service_started
+    ports: ["127.0.0.1:3007:3007"]
+    healthcheck:
+      <<: *ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3007/ready"]
+
+  gateway:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: gateway }
+    environment:
+      MOCK_URL: http://mock:4010
+      AUTH_URL: http://auth:3001
+      CATALOG_URL: http://catalog:3002
+    depends_on:
+      mock:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+    ports: ["127.0.0.1:8080:8080"]
+    healthcheck:
+      <<: *ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ready"]
+
+volumes:
+  mongo:
+  rabbitmq:
