@@ -1,0 +1,20 @@
+{
+  "name": "@yais-kitchen/notification",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --env-file-if-exists=../../.env --watch src/server.js",
+    "send-sample": "node --env-file-if-exists=../../.env scripts/send-sample.js"
+  },
+  "dependencies": {
+    "@yais-kitchen/shared": "^0.1.0",
+    "mongoose": "~9.11.4",
+    "nodemailer": "~10.2.1"
+  },
+  "devDependencies": {
+    "amqplib": "~2.2.1",
+    "mongodb-memory-server-core": "^11.3.0"
+  }
+}

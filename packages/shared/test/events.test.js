@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { badRequest } from "../src/errors.js";
+import { createEventChecker, EventSpecError } from "../src/event-spec.js";
 import {
   connectEvents,
   createDeliveryHandler,
@@ -137,6 +139,45 @@ describe("handling one event", () => {
     expect(channel.acked).toEqual([message]);
   });
 
+  it("moves an event straight to the dead-letter queue when trying again won't help", async () => {
+    const handler = vi.fn(() => {
+      throw badRequest("This booking has no email.");
+    });
+    const { channel, onMessage } = deliveryHandler({
+      "booking.confirmed": handler,
+    });
+    const message = makeMessage(makeEvent());
+
+    await onMessage(message);
+
+    expect(handler).toHaveBeenCalledOnce();
+    expect(channel.sent).toHaveLength(1);
+    expect(channel.sent[0].queue).toBe(DEAD_LETTER_QUEUE);
+    expect(headersOf(channel.sent[0])).toMatchObject({
+      "x-attempts": 1,
+      "x-error": "This booking has no email.",
+    });
+    expect(channel.acked).toEqual([message]);
+  });
+
+  it("dead-letters an event that doesn't match asyncapi.yaml without handling it", async () => {
+    const handler = vi.fn();
+    const { channel, onMessage } = deliveryHandler(
+      { "booking.confirmed": handler },
+      { checkEvent: createEventChecker() },
+    );
+
+    await onMessage(
+      makeMessage(makeEvent("booking.confirmed", { bookingId: "b1" })),
+    );
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(channel.sent[0].queue).toBe(DEAD_LETTER_QUEUE);
+    expect(headersOf(channel.sent[0])["x-error"]).toContain(
+      "data must have required property 'email'",
+    );
+  });
+
   it("moves a message that isn't an event straight to the dead-letter queue", async () => {
     const handler = vi.fn();
     const { channel, onMessage } = deliveryHandler({
@@ -197,6 +238,8 @@ describe("connectEvents", () => {
       service: "notification",
       logger,
       connect: broker.connect,
+      // Most tests here are about delivery, so they skip asyncapi.yaml.
+      eventSpec: null,
       ...options,
     });
     return { broker, events, lines };
@@ -350,6 +393,33 @@ describe("connectEvents", () => {
     expect(broker.channel.acked).toHaveLength(1);
     expect(broker.connection.closed).toBe(true);
     expect(events.isReady()).toBe(false);
+  });
+
+  it("checks published events against asyncapi.yaml, so a sender's bug never leaves it", async () => {
+    const { broker, events } = await connect({ eventSpec: undefined });
+
+    const error = await events
+      .publish("auth.code_requested", { email: "guest@example.com", code: "1" })
+      .catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(EventSpecError);
+    expect(error.message).toContain("data.code must match pattern");
+    expect(error.message).not.toContain('"1"');
+    expect(broker.channel.published).toEqual([]);
+
+    await events.publish("auth.code_requested", {
+      email: "guest@example.com",
+      code: "482913",
+      expiresAt: "2026-11-20T09:10:00Z",
+    });
+    expect(broker.channel.published).toHaveLength(1);
+  });
+
+  it("refuses to consume a type that isn't in asyncapi.yaml", async () => {
+    const { events } = await connect({ eventSpec: undefined });
+    await expect(
+      events.consume({ "booking.confrimed": vi.fn() }),
+    ).rejects.toThrow("isn't an event in asyncapi.yaml");
   });
 
   it("never logs the broker URL, which holds a password", async () => {

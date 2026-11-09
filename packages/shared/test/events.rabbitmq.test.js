@@ -39,6 +39,8 @@ describe.skipIf(!url)("events through a real RabbitMQ", () => {
       service,
       logger,
       retryDelayMs: 20,
+      // These tests use their own event type, which isn't in asyncapi.yaml.
+      eventSpec: null,
     });
     opened.push(events);
     return { events, service };

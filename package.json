@@ -16,6 +16,7 @@
     "test": "vitest run --passWithNoTests",
     "mock": "npm run mock -w @yais-kitchen/api-spec",
     "gateway": "npm run dev -w @yais-kitchen/gateway",
+    "notification": "npm run dev -w @yais-kitchen/notification",
     "prepare": "husky"
   },
   "devDependencies": {

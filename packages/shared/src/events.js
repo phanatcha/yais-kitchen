@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import amqp from "amqplib";
 import { serviceUnavailable } from "./errors.js";
+import { createEventChecker, loadEventSpec } from "./event-spec.js";
 import { logContext } from "./logger.js";
 
 // The rules in packages/api-spec/asyncapi.yaml: one topic exchange, the event
@@ -45,8 +46,10 @@ function parseEvent(content) {
  * - it worked: the message is acked;
  * - it threw: the message goes to the retry queue and comes back later,
  *   waiting `retryDelayMs`, then twice as long each time, up to a minute;
- * - it threw on the last attempt, or the message isn't an event: the message
- *   goes to the dead-letter queue for a person to look at.
+ * - it threw on the last attempt, it threw an error with `retryable: false`
+ *   (any 4xx HttpError), the event doesn't match asyncapi.yaml, or the
+ *   message isn't an event: the message goes to the dead-letter queue for a
+ *   person to look at.
  * A message is only acked after the broker has its next copy.
  */
 export function createDeliveryHandler({
@@ -56,6 +59,7 @@ export function createDeliveryHandler({
   logger,
   maxAttempts = MAX_ATTEMPTS,
   retryDelayMs,
+  checkEvent,
 }) {
   const sendTo = (target, message, headers, extra = {}) =>
     confirmed((done) =>
@@ -108,12 +112,16 @@ export function createDeliveryHandler({
     }
 
     try {
+      checkEvent?.(event);
       await handler(event, { attempt });
     } catch (error) {
-      if (attempt >= maxAttempts) {
+      const hopeless = error?.retryable === false;
+      if (hopeless || attempt >= maxAttempts) {
         logger.error(
           { err: error, attempt },
-          "event failed for the last time; moving it to the dead-letter queue",
+          hopeless
+            ? "trying this event again won't help; moving it to the dead-letter queue"
+            : "event failed for the last time; moving it to the dead-letter queue",
         );
         await sendTo(DEAD_LETTER_QUEUE, message, {
           ...headers,
@@ -185,6 +193,7 @@ export function createDeliveryHandler({
  * @param {number} [options.retryDelayMs] Wait before the first retry. It doubles each time, up to a minute.
  * @param {number} [options.maxAttempts]
  * @param {number} [options.prefetch] How many events this service handles at once.
+ * @param {object | null} [options.eventSpec] From loadEventSpec. Published and received events are checked against it. Pass null to skip the checks.
  * @param {(error: Error) => void} [options.onFatal] Called when the broker closes our channel, which only happens because of a bug. Defaults to exiting, so Docker restarts the service.
  * @param {Function} [options.connect] For tests.
  */
@@ -195,9 +204,11 @@ export async function connectEvents({
   retryDelayMs = 5000,
   maxAttempts = MAX_ATTEMPTS,
   prefetch = 10,
+  eventSpec = loadEventSpec(),
   onFatal = () => setImmediate(() => process.exit(1)),
   connect = amqp.connect,
 }) {
+  const checkEvent = eventSpec ? createEventChecker(eventSpec) : undefined;
   const consumers = [];
   const inFlight = new Set();
   let channel = null;
@@ -224,6 +235,7 @@ export async function connectEvents({
       logger,
       maxAttempts,
       retryDelayMs,
+      checkEvent,
     });
     const { consumerTag } = await ch.consume(queue, (message) => {
       const work = onMessage(message)
@@ -282,7 +294,8 @@ export async function connectEvents({
 
   /**
    * Sends an event to every service that listens for its type. Resolves once
-   * RabbitMQ has it. Inside a request, the request ID goes with it, so the
+   * RabbitMQ has it. An event that doesn't match asyncapi.yaml throws an
+   * EventSpecError before it is sent, because it is a bug in the sender. Inside a request, the request ID goes with it, so the
    * logs of every service that handles the event show the same ID.
    * @param {string} type Such as `booking.confirmed`.
    * @param {object} data The event's `data`, as asyncapi.yaml describes it.
@@ -290,9 +303,6 @@ export async function connectEvents({
   async function publish(type, data, { version = 1 } = {}) {
     if (!EVENT_TYPE.test(type))
       throw new TypeError(`"${type}" is not an event type`);
-    const ch = channel;
-    if (!ch || closing) throw serviceUnavailable();
-
     const event = {
       id: randomUUID(),
       type,
@@ -300,6 +310,10 @@ export async function connectEvents({
       version,
       data,
     };
+    checkEvent?.(event);
+    const ch = channel;
+    if (!ch || closing) throw serviceUnavailable();
+
     const requestId = logContext.getStore()?.requestId;
     try {
       await confirmed((done) =>
@@ -336,6 +350,8 @@ export async function connectEvents({
     for (const type of Object.keys(handlers)) {
       if (!EVENT_TYPE.test(type))
         throw new TypeError(`"${type}" is not an event type`);
+      if (checkEvent && !checkEvent.knows(type))
+        throw new TypeError(`"${type}" isn't an event in asyncapi.yaml`);
     }
     if (consumers.some((consumer) => consumer.queue === queue)) {
       throw new Error(
