@@ -7,7 +7,7 @@ The one address the web app calls. It checks every request against the spec, the
 1. Answers CORS for the web app at `WEB_ORIGIN` only. CORS headers from services, such as the mock server's allow-all ones, are dropped.
 2. Checks the path, method, fields and query against `openapi.yaml`. Anything else gets 400, 404 or 405.
 3. Checks the token and role from `x-roles`. No token or an expired one gets 401, the wrong role 403.
-4. Applies the `x-rate-limit` of the operation, by email, address or user. Over the limit gets 429 with `Retry-After`.
+4. Applies each `x-rate-limit` rule of the operation, by email, address or user. Over any limit gets 429 with `Retry-After`.
 5. Forwards the request without `/api`, with the token, the request ID and the caller's address. `/api/catalog/yais` goes to the catalog service as `/catalog/yais`.
 6. Streams the answer back unchanged. A service that is down gets 503, and one slower than `UPSTREAM_TIMEOUT_MS` gets 504.
 
@@ -40,9 +40,9 @@ The gateway listens on http://localhost:8080 and reads the root `.env`.
 | `TRUST_PROXY_HOPS`                                                                     | `0`                     | Proxies in front of the gateway, so limits see the real caller |
 | `LOG_LEVEL`                                                                            | `info`                  |                                                                |
 
-## Tokens before the auth service exists
+## Tokens for trying things out
 
-Until auth is built, sign a token for any role with your local private key (`AUTH_PRIVATE_KEY` in `.env`, made with the `openssl` commands in `packages/shared/README.md`):
+With `AUTH_URL` set and auth running, sign in the real way: ask for a code, read it in Mailpit, and send it to `/api/auth/sessions`. To skip that, sign a token for any role with your local private key (`AUTH_PRIVATE_KEY` in `.env`, made with the `openssl` commands in `packages/shared/README.md`):
 
 ```bash
 npm run token -w @yais-kitchen/gateway -- tourist

@@ -19,7 +19,8 @@ export const TOKEN = Object.freeze({
 });
 
 /**
- * @typedef {{ id: string, role: string, email?: string, name?: string, yaiId?: string }} User
+ * @typedef {{ id: string, role: string, email?: string, name?: string, yaiId?: string, sessionId?: string }} User
+ * `sessionId` is the `sid` of a guest token: one guest checkout.
  */
 
 /**
@@ -48,6 +49,7 @@ export async function createTokenVerifier(publicKeyPem) {
       email: payload.email,
       name: payload.name,
       yaiId: payload.yaiId,
+      sessionId: payload.sid,
     };
   };
 }

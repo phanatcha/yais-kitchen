@@ -43,23 +43,28 @@ function caller(key, req) {
   return req.ip;
 }
 
+/** An operation's `x-rate-limit`: one rule, or a list of them. */
+export const rateLimitsOf = (operation) =>
+  [operation?.["x-rate-limit"] ?? []].flat();
+
 /**
- * Applies the `x-rate-limit` of the operation the request matched, such as
- * `{ windowSeconds: 900, max: 5, key: email }` on sign-in codes. Over the
- * limit, the caller gets 429 with `Retry-After`.
+ * Applies every `x-rate-limit` rule of the operation the request matched,
+ * such as `{ windowSeconds: 900, max: 5, key: email }` on sign-in codes.
+ * Over any limit, the caller gets 429 with `Retry-After`.
  */
 export function limitFromSpec(limiter) {
   return function checkRateLimit(req, res, next) {
     const operation = req.openapi?.schema;
-    const rule = operation?.["x-rate-limit"];
-    if (!rule) return next();
-
-    const { allowed, retryAfterSeconds } = limiter.hit(
-      `${operation.operationId}:${caller(rule.key, req)}`,
-      rule.windowSeconds * 1000,
-      rule.max,
-    );
-    if (!allowed) return next(tooManyRequests(retryAfterSeconds));
+    let waitSeconds = 0;
+    for (const rule of rateLimitsOf(operation)) {
+      const { allowed, retryAfterSeconds } = limiter.hit(
+        `${operation.operationId}:${rule.key}:${caller(rule.key, req)}`,
+        rule.windowSeconds * 1000,
+        rule.max,
+      );
+      if (!allowed) waitSeconds = Math.max(waitSeconds, retryAfterSeconds);
+    }
+    if (waitSeconds > 0) return next(tooManyRequests(waitSeconds));
     next();
   };
 }

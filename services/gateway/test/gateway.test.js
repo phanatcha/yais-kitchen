@@ -6,7 +6,11 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createGatewayApp, gatewaySpec, resolveUpstreams } from "../src/app.js";
 import { SERVICES } from "../src/proxy.js";
-import { createRateLimiter, RATE_LIMIT_KEYS } from "../src/rate-limit.js";
+import {
+  createRateLimiter,
+  RATE_LIMIT_KEYS,
+  rateLimitsOf,
+} from "../src/rate-limit.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 const ID = "6650a1f2c3d4e5f6a7b8c9d1";
@@ -439,6 +443,33 @@ describe("rate limits from the spec", () => {
     expect((await ask()).status).toBe(200);
   });
 
+  it("also limits sign-in codes from one address, whatever the email", async () => {
+    const app = gateway();
+    const ask = () =>
+      request(app)
+        .post("/api/auth/codes")
+        .send({ email: `${randomUUID()}@example.com` });
+
+    for (let i = 0; i < 20; i += 1) expect((await ask()).status).toBe(200);
+    const blocked = await ask();
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers["retry-after"]).toBe("900");
+  });
+
+  it("counts a blocked request against every limit it passed", async () => {
+    let time = Date.parse("2026-11-20T09:00:00Z");
+    const app = gateway({ limiter: createRateLimiter({ now: () => time }) });
+    const ask = (email) => request(app).post("/api/auth/codes").send({ email });
+
+    for (let i = 0; i < 5; i += 1) await ask("guest@example.com");
+    expect((await ask("guest@example.com")).status).toBe(429);
+    time += 60_000;
+    // 6 from this address so far: 14 more fit under the address limit.
+    for (let i = 0; i < 14; i += 1)
+      expect((await ask(`${i}@example.com`)).status).toBe(200);
+    expect((await ask("last@example.com")).status).toBe(429);
+  });
+
   it("limits sign-in tries by the caller's address", async () => {
     const app = gateway();
     const signIn = () =>
@@ -467,8 +498,7 @@ describe("rate limits from the spec", () => {
   it("understands every x-rate-limit in the spec", () => {
     const rules = Object.values(gatewaySpec().paths)
       .flatMap((item) => Object.values(item))
-      .map((operation) => operation["x-rate-limit"])
-      .filter(Boolean);
+      .flatMap((operation) => rateLimitsOf(operation));
 
     expect(rules.length).toBeGreaterThan(0);
     for (const rule of rules) {
