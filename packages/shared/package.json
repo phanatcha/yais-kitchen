@@ -1,0 +1,26 @@
+{
+  "name": "@yais-kitchen/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./testing": "./src/testing.js"
+  },
+  "scripts": {
+    "example": "node example/server.js"
+  },
+  "dependencies": {
+    "@yais-kitchen/api-spec": "^0.1.0",
+    "amqplib": "~2.2.1",
+    "express": "^5.3.0",
+    "express-openapi-validator": "^5.6.2",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.16",
+    "pino": "^10.4.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.2"
+  }
+}
