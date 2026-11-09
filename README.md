@@ -56,9 +56,3 @@ npm test
 | `infra`                 | Docker Compose, the setup script, the stack test           |
 | `docs`                  | Guides that span services                                  |
 
-## How we work
-
-- One branch and pull request per piece of work, named like `api-spec` or `auth-sign-in`.
-- Every pull request needs one review and passing CI. Nobody pushes straight to `main`.
-- When the API changes, the spec changes first and the code follows.
-- Commit messages are short notes, like `add sign-in code email, fix token expiry`.
