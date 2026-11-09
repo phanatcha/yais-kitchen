@@ -69,6 +69,7 @@ await startService({ app, port: config.PORT, logger, onStop: events.close });
 - Routes use the spec's paths without `/api`, such as `/catalog/yais`. The gateway takes `/api` off.
 - A path or field that isn't in `openapi.yaml` gets a 404 or 400. Change the spec first, then the route.
 - Don't check roles in routes: `x-roles` in the spec already does. Do check ownership in the route, for example that a family only sees its own Yai.
+- `req.user` has `id`, `role`, `email`, `name`, `yaiId` for family accounts, and `sessionId` for guests. A guest token can be made for any email, so a guest only sees what was made with the same `sessionId`, never everything for that `id`.
 - Who may call what comes from each operation's `security` in the spec:
   - `[]` is open to anyone.
   - `[{}, { bearerAuth: [] }]` is open too, but a token that is sent is checked, so the route sees `req.user` (an admin asking for hidden Yais, say).

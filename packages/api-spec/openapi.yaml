@@ -57,7 +57,11 @@ paths:
         minutes.
       security: []
       x-roles: []
-      x-rate-limit: { windowSeconds: 900, max: 5, key: email }
+      # Per email, so one inbox isn't flooded, and per address, so one
+      # caller can't send codes to everyone.
+      x-rate-limit:
+        - { windowSeconds: 900, max: 5, key: email }
+        - { windowSeconds: 900, max: 20, key: ip }
       x-requirements: [FR-22]
       requestBody:
         required: true
@@ -83,7 +87,9 @@ paths:
       summary: Sign in with the emailed code
       description: |
         Returns a 15-minute access token and sets the refresh token in an
-        httpOnly cookie. Five wrong codes in a row lock that code.
+        httpOnly cookie. Each code works once. Five wrong codes in a row lock
+        that code. A 401 says why in `code`: `wrong_code`, `code_expired`
+        or `code_locked`. For the last two, ask for a new code.
       security: []
       x-roles: []
       x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
@@ -115,7 +121,11 @@ paths:
       tags: [Auth]
       operationId: refreshSession
       summary: Swap the refresh cookie for a new access token
-      description: The refresh token rotates on every use.
+      description: |
+        The refresh token rotates on every use. If two tabs refresh at the
+        same moment, the second gets an access token without a new cookie.
+        An old refresh token used again later ends that session, because it
+        may have been stolen.
       security:
         - refreshCookie: []
       x-roles: []
@@ -153,7 +163,10 @@ paths:
         this email and returns a 30-minute guest token. A guest token can only
         create a booking, pay for it and read that booking. To see My Classes
         the tourist signs in with a code. The name is only saved for a new
-        account.
+        account. The token and the answer carry the name given here, so
+        nobody learns the name saved on an existing account. An email that
+        belongs to a family, helper or admin account gets 409
+        `sign_in_needed`: they sign in with a code instead.
       security: []
       x-roles: []
       x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
@@ -176,6 +189,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Session" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
@@ -184,6 +198,7 @@ paths:
       tags: [Auth]
       operationId: getMe
       summary: The signed-in user
+      description: A guest token gets 403. The tourist signs in to see the account.
       x-roles: [tourist, family, helper, admin]
       x-requirements: [FR-22]
       responses:
@@ -193,6 +208,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     delete:
       tags: [Auth]
       operationId: deleteMe
@@ -208,6 +224,7 @@ paths:
         "202":
           description: Deletion started.
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /auth/users:
     get:
@@ -228,13 +245,17 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/UserPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Auth]
       operationId: createUser
       summary: Create a family, helper or admin account
-      description: Tourists make their own accounts. A family account needs `yaiId`.
+      description: |
+        Tourists make their own accounts. A family account needs `yaiId`,
+        and only a family account may have one. An email that already has an
+        account gets 409 `email_taken`.
       x-roles: [admin]
       x-requirements: [FR-28, FR-34]
       requestBody:
@@ -957,7 +978,8 @@ paths:
       summary: One booking
       description: |
         Booking Confirmed polls this until `status` is `confirmed`. Get Ready
-        and After Class read it too. Guests and tourists see only their own.
+        and After Class read it too. Tourists see only their own bookings, and
+        a guest only the ones made with the same `sid` in their token.
       x-roles: [guest, tourist, family, admin]
       x-requirements: [FR-11, FR-12, FR-13]
       responses:
@@ -1711,7 +1733,9 @@ components:
         `startGuestSession` (30 minutes). Auth signs it with its Ed25519
         private key, and every service checks it with the public key.
         Claims: `sub` (user ID), `role`, `email`, `name`, and `yaiId` for
-        family accounts. A guest token has `role: guest`.
+        family accounts. A guest token has `role: guest` and `sid`, an ID for
+        that guest checkout. Anyone can start one for any email, so a guest
+        may only read bookings made with the same `sid`.
     refreshCookie:
       type: apiKey
       in: cookie
