@@ -22,7 +22,13 @@
     "auth": "npm run dev -w @yais-kitchen/auth",
     "catalog": "npm run dev -w @yais-kitchen/catalog",
     "notification": "npm run dev -w @yais-kitchen/notification",
-    "prepare": "husky"
+    "prepare": "husky",
+    "booking": "npm run dev -w @yais-kitchen/booking",
+    "payment": "npm run dev -w @yais-kitchen/payment",
+    "live-class": "npm run dev -w @yais-kitchen/live-class",
+    "test:max": "vitest run services/booking/tests services/payment/tests services/live-class/tests",
+    "validate:api": "npm run lint -w @yais-kitchen/api-spec",
+    "up:max": "docker compose -f infra/docker-compose.yml -f infra/max.compose.yml up -d --build --wait"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,6 +36,7 @@
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "prettier": "^3.9.10",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "@vitest/coverage-v8": "^5.1.0"
   }
 }

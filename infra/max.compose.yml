@@ -1,0 +1,64 @@
+# Optional provider-backed services. Use with docker-compose.yml after adding
+# Stripe test and LiveKit credentials to .env. Base stack still works without them.
+services:
+  booking:
+    env_file: ../.env
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: booking }
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      CATALOG_URL: http://catalog:3002
+    depends_on:
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3003/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  payment:
+    env_file: ../.env
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: payment }
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      BOOKING_URL: http://booking:3003
+    depends_on:
+      booking: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3004/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  live-class:
+    env_file: ../.env
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: live-class }
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      CATALOG_URL: http://catalog:3002
+      BOOKING_URL: http://booking:3003
+    depends_on:
+      booking: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3005/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  gateway:
+    environment:
+      BOOKING_URL: http://booking:3003
+      PAYMENT_URL: http://payment:3004
+      LIVE_CLASS_URL: http://live-class:3005

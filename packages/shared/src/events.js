@@ -300,13 +300,21 @@ export async function connectEvents({
    * @param {string} type Such as `booking.confirmed`.
    * @param {object} data The event's `data`, as asyncapi.yaml describes it.
    */
-  async function publish(type, data, { version = 1 } = {}) {
+  async function publish(
+    type,
+    data,
+    {
+      version = 1,
+      id = randomUUID(),
+      occurredAt = new Date().toISOString(),
+    } = {},
+  ) {
     if (!EVENT_TYPE.test(type))
       throw new TypeError(`"${type}" is not an event type`);
     const event = {
-      id: randomUUID(),
+      id,
       type,
-      occurredAt: new Date().toISOString(),
+      occurredAt,
       version,
       data,
     };
