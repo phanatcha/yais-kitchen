@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import App from "./App.jsx";
 import PagePlaceholder from "./components/PagePlaceholder.jsx";
 import NotFound from "./components/NotFound.jsx";
+import SignIn from "./pages/SignIn/SignIn.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -22,7 +23,7 @@ export const router = createBrowserRouter([
       },
 
       // Account and Cook (Figma 11–15)
-      { path: "sign-in", element: page("14 Sign In") },
+      { path: "sign-in", element: <SignIn /> },
       { path: "my-classes", element: page("15 My Classes") },
       { path: "my-classes/:bookingId/ready", element: page("11 Get Ready") },
       { path: "my-classes/:bookingId/live", element: page("12 Live Class") },

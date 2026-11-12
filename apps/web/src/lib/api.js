@@ -9,9 +9,11 @@ export function setAccessToken(token) {
 
 export class ApiError extends Error {
   constructor(status, body) {
-    super(body?.message ?? `Request failed with status ${status}`);
+    // Every error body has the `Error` shape: { error: { code, message, ... } }.
+    super(body?.error?.message ?? `Request failed with status ${status}`);
     this.name = "ApiError";
     this.status = status;
+    this.code = body?.error?.code ?? null;
     this.body = body;
   }
 }

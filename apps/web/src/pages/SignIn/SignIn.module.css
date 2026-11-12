@@ -1,0 +1,389 @@
+/* Figma: 14 Sign In (node 9:38). Tokens use the Figma variable names. */
+.page {
+  --tamarind-brown: #4a3222;
+  --chili-coral: #c8402d;
+  --chili-coral-dark: #a83322;
+  --coconut-cream: #fff8ee;
+  --pandan: #b8cc9a;
+  --font-heading: "Kanit", system-ui, sans-serif;
+  --font-body: "Sarabun", system-ui, sans-serif;
+  --font-script: "Charmonman", cursive;
+
+  background: var(--coconut-cream);
+  color: var(--tamarind-brown);
+  font-family: var(--font-body);
+  padding: 20px clamp(16px, 5vw, 72px) 96px;
+  overflow-x: clip;
+}
+
+.inner {
+  max-width: 1368px;
+  margin: 0 auto;
+}
+
+/* Tag/Sample */
+.tag {
+  width: fit-content;
+  margin: 0 0 0 auto;
+  padding: 7px 16px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 999px;
+  font: 500 15px/20px var(--font-heading);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 660px);
+  justify-content: space-between;
+  column-gap: 48px;
+  margin-top: 26px;
+}
+
+/* Heading/1 + Script/Large */
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+  margin: 0;
+}
+
+.titleMain {
+  font: 700 60px/70px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.titleScript {
+  font: 700 64px/84px var(--font-script);
+  color: var(--chili-coral);
+}
+
+/* Body/Large */
+.intro {
+  /* The 84px script line already adds space above, so the gap is 14px. */
+  margin: 14px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.form {
+  display: grid;
+  gap: 24px;
+  max-width: 444px;
+  margin-top: 40px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font: 500 18px/24px var(--font-heading);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 60px;
+  padding: 0 20px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 16px;
+  background: var(--coconut-cream);
+  color: var(--tamarind-brown);
+  font: 400 18px/28px var(--font-body);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--chili-coral);
+  box-shadow: 0 0 0 1px var(--chili-coral);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--chili-coral);
+}
+
+.error {
+  margin: 0;
+  color: var(--chili-coral);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* "Code sent" row */
+.codeSent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.checkDot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--pandan);
+}
+
+.codeSentText {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.link,
+.resendButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--chili-coral);
+  font-family: var(--font-heading);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* Code boxes: one real input laid over six boxes that show its digits. */
+.codeBoxes {
+  position: relative;
+  max-width: 444px;
+}
+
+.codeInput {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  outline: none;
+}
+
+.codeInput::selection {
+  background: transparent;
+}
+
+.digits {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 64px));
+  gap: 12px;
+}
+
+.digit {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 64 / 76;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 16px;
+  background: var(--coconut-cream);
+  font: 500 32px/40px var(--font-heading);
+}
+
+.codeInput[aria-invalid="true"] + .digits .digit {
+  border-color: var(--chili-coral);
+}
+
+/* Focus shows as the coral 3px box from the design. */
+.codeInput:focus-visible + .digits .digitActive,
+.codeInput:focus + .digits .digitActive {
+  border: 3px solid var(--chili-coral);
+}
+
+.caret {
+  display: none;
+  width: 2px;
+  height: 32px;
+  background: var(--tamarind-brown);
+}
+
+.codeInput:focus + .digits .caret {
+  display: block;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Button: Primary */
+.primary {
+  width: 100%;
+  padding: 15px 30px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--chili-coral);
+  color: var(--coconut-cream);
+  font: 500 18px/24px var(--font-heading);
+  cursor: pointer;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--chili-coral-dark);
+}
+
+.primary:disabled,
+.resendButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.primary:focus-visible,
+.link:focus-visible,
+.resendButton:focus-visible,
+.outline:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}
+
+/* Body/Small */
+.resend {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.resendButton {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.notice {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.notice:empty {
+  margin: 0;
+}
+
+.newHere {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  max-width: 444px;
+  margin-top: 40px;
+}
+
+.newHereText {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+/* Button: Outline */
+.outline {
+  padding: 15px 30px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 999px;
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+  text-decoration: none;
+}
+
+.outline:hover {
+  background: var(--tamarind-brown);
+  color: var(--coconut-cream);
+}
+
+/* Photo slot */
+.aside {
+  position: relative;
+  margin: 0;
+}
+
+.sparkle {
+  position: absolute;
+  top: -44px;
+  left: -48px;
+  z-index: 1;
+}
+
+.photo {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  aspect-ratio: 660 / 540;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 28px;
+  background: var(--pandan);
+}
+
+.photoLabel {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.caption {
+  margin-top: 24px;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+@media (max-width: 1100px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 72px;
+  }
+
+  .aside {
+    max-width: 660px;
+  }
+
+  .sparkle {
+    top: -28px;
+    left: auto;
+    right: -8px;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 600px) {
+  .tag {
+    margin-left: 0;
+  }
+
+  .titleMain {
+    font-size: 44px;
+    line-height: 52px;
+  }
+
+  .titleScript {
+    font-size: 48px;
+    line-height: 64px;
+  }
+
+  .digits {
+    gap: 8px;
+  }
+
+  .digit {
+    font-size: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codeInput:focus + .digits .caret {
+    animation: none;
+  }
+}
