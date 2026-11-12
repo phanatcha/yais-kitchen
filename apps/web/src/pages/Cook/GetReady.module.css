@@ -1,0 +1,54 @@
+/* Figma: 11 Get Ready (node 9:34). */
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 0;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 304px);
+  gap: 48px;
+  margin-top: 44px;
+}
+
+.buy,
+.group {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.setup {
+  display: grid;
+  align-content: start;
+  gap: 32px;
+}
+
+.headingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tipLabel {
+  font-weight: 600;
+}
+
+.testButton {
+  justify-self: start;
+  margin-top: 12px;
+}
+
+.joinNote {
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

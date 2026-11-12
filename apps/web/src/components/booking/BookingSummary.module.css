@@ -1,0 +1,43 @@
+.summary {
+  display: grid;
+  gap: 14px;
+}
+
+.photo {
+  height: 160px;
+}
+
+.rows {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.row dd {
+  margin: 0;
+  text-align: right;
+}
+
+.local {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.total {
+  padding-top: 14px;
+  border-top: 2px solid var(--palm-sugar);
+  font: 500 24px/32px var(--font-heading);
+}
+
+.total dd {
+  color: var(--chili-coral);
+}

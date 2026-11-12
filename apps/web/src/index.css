@@ -1,0 +1,24 @@
+/* Design tokens from Figma (yai-s-kitchen). Names follow the Figma variables. */
+:root {
+  --tamarind-brown: #4a3222;
+  --chili-coral: #c8402d;
+  --chili-coral-dark: #a83322;
+  --coconut-cream: #fff8ee;
+  --pandan: #b8cc9a;
+  --turmeric: #ffd34d;
+  --rice-paper: #f3ecdf;
+  --palm-sugar: #c29a72;
+  --thai-tea: #f4a460;
+  --live-red: #e3122d;
+  --font-heading: "Kanit", system-ui, sans-serif;
+  --font-body: "Sarabun", system-ui, sans-serif;
+  --font-script: "Charmonman", cursive;
+
+  font-family: var(--font-body);
+  color: var(--tamarind-brown);
+  background: var(--coconut-cream);
+}
+
+body {
+  margin: 0;
+}

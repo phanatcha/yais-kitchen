@@ -1,0 +1,17 @@
+/* Figma: 08 Your Details (node 9:30). Two 424px columns with a 24px gap. */
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 424px));
+  gap: 32px 24px;
+  margin-top: 30px;
+}
+
+.experience {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+  .form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
