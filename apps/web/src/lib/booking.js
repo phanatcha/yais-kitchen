@@ -133,17 +133,28 @@ export function useCancelBooking() {
   });
 }
 
-/** PUT /booking/bookings/{bookingId}/checklist: saves shopping list ticks. */
+/**
+ * PUT /booking/bookings/{bookingId}/checklist: saves shopping list ticks.
+ * The tick shows at once and rolls back if saving fails. On success the cache
+ * keeps what was sent, which is what the server stores.
+ */
 export function useUpdateChecklist(bookingId) {
   const queryClient = useQueryClient();
+  const key = bookingKey(bookingId);
   return useMutation({
     mutationFn: (checkedIngredientIds) =>
       api(`/booking/bookings/${bookingId}/checklist`, {
         method: "PUT",
         body: { checkedIngredientIds },
       }),
-    onSuccess: (booking) =>
-      queryClient.setQueryData(bookingKey(bookingId), booking),
+    onMutate: async (checkedIngredientIds) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (b) => b && { ...b, checkedIngredientIds });
+      return { previous };
+    },
+    onError: (_error, _ids, context) =>
+      queryClient.setQueryData(key, context?.previous),
   });
 }
 

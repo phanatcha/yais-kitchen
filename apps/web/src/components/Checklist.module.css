@@ -1,0 +1,45 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  font-size: 18px;
+  line-height: 28px;
+  cursor: pointer;
+}
+
+.box {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 999px;
+  background: var(--coconut-cream);
+}
+
+.item:has(input:checked) .box {
+  border-color: var(--pandan);
+  background: var(--pandan);
+}
+
+.item:has(input:focus-visible) .box {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 2px;
+}
+
+.name {
+  flex: 1;
+}
+
+.amount {
+  text-align: right;
+}

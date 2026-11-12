@@ -9,6 +9,7 @@ import styles from "./BookingLayout.module.css";
  */
 export default function BookingLayout({
   step,
+  top,
   titleMain,
   titleScript,
   lead,
@@ -19,7 +20,7 @@ export default function BookingLayout({
     <div className={ui.page}>
       <div className={`${ui.inner} ${styles.layout}`}>
         <div className={styles.steps}>
-          <BookingSteps current={step} />
+          {step ? <BookingSteps current={step} /> : top}
         </div>
         <div className={styles.main}>
           <PageTitle main={titleMain} script={titleScript} />

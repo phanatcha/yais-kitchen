@@ -8,6 +8,7 @@ import YourDetails from "./pages/Book/YourDetails.jsx";
 import Payment from "./pages/Book/Payment.jsx";
 import BookingConfirmed from "./pages/Book/BookingConfirmed.jsx";
 import MyClasses from "./pages/Account/MyClasses.jsx";
+import GetReady from "./pages/Cook/GetReady.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -27,7 +28,7 @@ export const router = createBrowserRouter([
       // Account and Cook (Figma 11–15)
       { path: "sign-in", element: <SignIn /> },
       { path: "my-classes", element: <MyClasses /> },
-      { path: "my-classes/:bookingId/ready", element: page("11 Get Ready") },
+      { path: "my-classes/:bookingId/ready", element: <GetReady /> },
       { path: "my-classes/:bookingId/live", element: page("12 Live Class") },
       { path: "my-classes/:bookingId/after", element: page("13 After Class") },
 
