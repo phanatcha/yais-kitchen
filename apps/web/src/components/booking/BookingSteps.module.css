@@ -1,0 +1,62 @@
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The 44px palm-sugar line between steps. */
+.step + .step::before {
+  content: "";
+  width: 44px;
+  height: 3px;
+  margin-right: 6px;
+  background: var(--palm-sugar);
+}
+
+.dot {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: url("../../assets/step-dot.svg") center / contain no-repeat;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.current .dot {
+  background-image: url("../../assets/step-dot-current.svg");
+  color: var(--coconut-cream);
+}
+
+.label {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.current .label {
+  font: 500 18px/24px var(--font-heading);
+}
+
+@media (max-width: 600px) {
+  .step + .step::before {
+    width: 16px;
+  }
+
+  .step:not(.current) .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

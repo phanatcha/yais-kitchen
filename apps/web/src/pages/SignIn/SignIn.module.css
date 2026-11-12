@@ -1,14 +1,5 @@
-/* Figma: 14 Sign In (node 9:38). Tokens use the Figma variable names. */
+/* Figma: 14 Sign In (node 9:38). Tokens live in src/index.css. */
 .page {
-  --tamarind-brown: #4a3222;
-  --chili-coral: #c8402d;
-  --chili-coral-dark: #a83322;
-  --coconut-cream: #fff8ee;
-  --pandan: #b8cc9a;
-  --font-heading: "Kanit", system-ui, sans-serif;
-  --font-body: "Sarabun", system-ui, sans-serif;
-  --font-script: "Charmonman", cursive;
-
   background: var(--coconut-cream);
   color: var(--tamarind-brown);
   font-family: var(--font-body);

@@ -1,0 +1,20 @@
+/* Temporary dev menu, kept small so it doesn't hide the designed pages. */
+.devNav {
+  padding: 8px 16px;
+  border-bottom: 1px dashed var(--palm-sugar);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.devNav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.devNav a {
+  color: var(--tamarind-brown);
+}
