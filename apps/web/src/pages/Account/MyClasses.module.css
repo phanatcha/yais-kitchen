@@ -1,0 +1,118 @@
+/* Figma: 15 My Classes (node 9:39). */
+.tag {
+  display: flex;
+  margin: 4px 0 0 auto;
+}
+
+.title {
+  margin-top: 26px;
+}
+
+.signedIn {
+  margin-top: 14px;
+}
+
+.section {
+  display: grid;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.signedIn + .section {
+  margin-top: 52px;
+}
+
+.list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Class row */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 32px 24px 24px;
+}
+
+.photo {
+  flex: none;
+  width: 200px;
+  height: 150px;
+}
+
+.info {
+  display: grid;
+  flex: 1;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.statusTag {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font: 500 15px/20px var(--font-heading);
+}
+
+.turmeric {
+  background: var(--turmeric);
+}
+
+.pandan {
+  background: var(--pandan);
+}
+
+.outlined {
+  padding: 5px 14px;
+  border: 2px solid var(--tamarind-brown);
+}
+
+.actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  flex: none;
+}
+
+.pastActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.rated {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+@media (max-width: 860px) {
+  .row {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .photo {
+    width: 100%;
+    height: 140px;
+  }
+
+  .actions {
+    justify-items: start;
+    width: 100%;
+  }
+
+  .pastActions {
+    justify-content: flex-start;
+  }
+}

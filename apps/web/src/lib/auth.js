@@ -24,6 +24,21 @@ export function useSignIn() {
   });
 }
 
+/**
+ * DELETE /auth/sessions/current: ends the session and clears the refresh
+ * cookie. The token and cached data are dropped even if the call fails.
+ */
+export function useSignOut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api("/auth/sessions/current", { method: "DELETE" }),
+    onSettled: () => {
+      setAccessToken(null);
+      queryClient.clear();
+    },
+  });
+}
+
 /** GET /auth/me: the signed-in user. Pass `enabled: false` while signed out. */
 export function useMe({ enabled = true } = {}) {
   return useQuery({

@@ -111,11 +111,12 @@ export function useBooking(bookingId, { pollWhilePending = false } = {}) {
 }
 
 /** GET /booking/bookings: My Classes (tourist) or a Yai's bookings (family). */
-export function useBookings(params = {}) {
+export function useBookings(params = {}, { enabled = true } = {}) {
   return useQuery({
     queryKey: ["booking", "bookings", params],
     queryFn: ({ signal }) =>
       api(withQuery("/booking/bookings", params), { signal }),
+    enabled,
   });
 }
 
