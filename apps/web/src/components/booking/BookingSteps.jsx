@@ -11,12 +11,14 @@ export default function BookingSteps({ current }) {
         {STEPS.map((label, i) => {
           const number = i + 1;
           const isCurrent = number === current;
+          const isDone = number < current;
+          let className = styles.step;
+          if (isCurrent) className += ` ${styles.current}`;
+          if (isDone) className += ` ${styles.done}`;
           return (
             <li
               key={label}
-              className={
-                isCurrent ? `${styles.step} ${styles.current}` : styles.step
-              }
+              className={className}
               aria-current={isCurrent ? "step" : undefined}
             >
               <span className={styles.dot} aria-hidden="true">
@@ -25,6 +27,7 @@ export default function BookingSteps({ current }) {
               <span className={styles.label}>
                 <span className={ui.visuallyHidden}>Step {number}: </span>
                 {label}
+                {isDone && <span className={ui.visuallyHidden}> (done)</span>}
               </span>
             </li>
           );

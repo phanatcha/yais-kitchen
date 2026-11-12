@@ -194,6 +194,44 @@ textarea.input {
   font: 500 15px/20px var(--font-heading);
 }
 
+/*
+ * Choice pills: a radio or checkbox drawn as an Outline button that turns
+ * Turmeric when chosen ("A little / New to cooking / I cook a lot").
+ */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choicesLegend {
+  margin-bottom: 12px;
+  padding: 0;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.choice {
+  composes: outline;
+}
+
+.choice:hover:not(:has(input:disabled)) {
+  background: var(--rice-paper);
+  color: var(--tamarind-brown);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--turmeric);
+  background: var(--turmeric);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}
+
 /* Rice-paper card, e.g. Booking summary and Calendar */
 .card {
   box-sizing: border-box;

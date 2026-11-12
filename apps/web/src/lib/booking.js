@@ -46,6 +46,14 @@ export function useCreateHold() {
   });
 }
 
+/** DELETE /booking/holds/{holdId}: gives the seats back. */
+export function useReleaseHold() {
+  return useMutation({
+    mutationFn: (holdId) =>
+      api(`/booking/holds/${holdId}`, { method: "DELETE" }),
+  });
+}
+
 /** POST /auth/guest-sessions: a 30-minute token for checkout without signing in. */
 export function useStartGuestSession() {
   return useMutation({

@@ -32,6 +32,10 @@
   font: 500 18px/24px var(--font-heading);
 }
 
+.done .dot {
+  background-image: url("../../assets/step-dot-done.svg");
+}
+
 .current .dot {
   background-image: url("../../assets/step-dot-current.svg");
   color: var(--coconut-cream);
