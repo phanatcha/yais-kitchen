@@ -12,6 +12,7 @@ import GetReady from "./pages/Cook/GetReady.jsx";
 import LiveClass from "./pages/Cook/LiveClass.jsx";
 import AfterClass from "./pages/Cook/AfterClass.jsx";
 import HelperClasses from "./pages/Helper/HelperClasses.jsx";
+import HelperLive from "./pages/Helper/HelperLive.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -37,10 +38,7 @@ export const router = createBrowserRouter([
 
       // Helper and Yai's family (new design)
       { path: "helper", element: <HelperClasses /> },
-      {
-        path: "helper/classes/:classTimeId/live",
-        element: page("Helper: live class"),
-      },
+      { path: "helper/classes/:classTimeId/live", element: <HelperLive /> },
       { path: "family/times", element: page("Family: available times") },
       { path: "family/bookings", element: page("Family: bookings") },
       { path: "family/earnings", element: page("Family: earnings") },
