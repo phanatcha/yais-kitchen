@@ -5,6 +5,7 @@ import NotFound from "./components/NotFound.jsx";
 import SignIn from "./pages/SignIn/SignIn.jsx";
 import PickATime from "./pages/Book/PickATime.jsx";
 import YourDetails from "./pages/Book/YourDetails.jsx";
+import Payment from "./pages/Book/Payment.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -18,7 +19,7 @@ export const router = createBrowserRouter([
       // Book (Figma 07–10)
       { path: "classes/:classId/book", element: <PickATime /> },
       { path: "book/details", element: <YourDetails /> },
-      { path: "book/payment", element: page("09 Payment") },
+      { path: "book/payment", element: <Payment /> },
       {
         path: "book/confirmed/:bookingId",
         element: page("10 Booking Confirmed"),
