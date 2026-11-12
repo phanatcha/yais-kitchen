@@ -46,6 +46,16 @@ export function formatThaiTime(iso) {
   }).format(new Date(iso));
 }
 
+/** "2026-11-20T09:00:00Z" → "Friday 20 November" (the day in Thailand) */
+export function formatThaiLongDate(iso) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: BANGKOK,
+  }).format(new Date(iso));
+}
+
 /** "2026-11-20T09:00:00Z" → "2026-11-20", the day in Thailand. */
 export function thaiDateKey(iso) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: BANGKOK }).format(
