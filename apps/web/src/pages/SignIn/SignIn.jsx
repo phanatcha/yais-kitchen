@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError } from "../../lib/api.js";
 import { useRequestCode, useSignIn } from "../../lib/auth.js";
@@ -8,6 +8,15 @@ import sparkle from "../../assets/sparkle.svg";
 import styles from "./SignIn.module.css";
 
 const CODE_LENGTH = 6;
+/** Seconds before "Send a new code" unlocks after a code is sent. */
+const RESEND_SECONDS = 60;
+
+/** 42 → "0:42" */
+function formatCountdown(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
 
 /** Turns a failed request into a sentence safe to show the user. */
 function errorMessage(error) {
@@ -32,6 +41,14 @@ export default function SignIn() {
   const [code, setCode] = useState("");
   const [notice, setNotice] = useState("");
   const [cameBack, setCameBack] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  // Counts down one second at a time while a resend is locked.
+  useEffect(() => {
+    if (resendIn <= 0) return undefined;
+    const timer = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
 
   const titleId = useId();
   const emailId = useId();
@@ -49,6 +66,7 @@ export default function SignIn() {
         signIn.reset();
         setCode("");
         setNotice("");
+        setResendIn(RESEND_SECONDS);
         setStep("code");
       },
     });
@@ -72,6 +90,7 @@ export default function SignIn() {
     requestCode.mutate(trimmedEmail, {
       onSuccess: () => {
         setCode("");
+        setResendIn(RESEND_SECONDS);
         setNotice(`We sent a new code to ${trimmedEmail}.`);
       },
     });
@@ -83,6 +102,7 @@ export default function SignIn() {
     setCode("");
     setNotice("");
     setCameBack(true);
+    setResendIn(0);
     setStep("email");
   }
 
@@ -240,14 +260,25 @@ export default function SignIn() {
 
                 <p className={styles.resend}>
                   Didn&apos;t get it?{" "}
-                  <button
-                    type="button"
-                    className={styles.resendButton}
-                    onClick={handleResend}
-                    disabled={requestCode.isPending}
-                  >
-                    {requestCode.isPending ? "Sending…" : "Send a new code"}
-                  </button>
+                  {resendIn > 0 ? (
+                    // Not a live region: reading it out every second is noise.
+                    <>
+                      You can ask for a new code in{" "}
+                      <time dateTime={`PT${resendIn}S`}>
+                        {formatCountdown(resendIn)}
+                      </time>
+                      .
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.resendButton}
+                      onClick={handleResend}
+                      disabled={requestCode.isPending}
+                    >
+                      {requestCode.isPending ? "Sending…" : "Send a new code"}
+                    </button>
+                  )}
                 </p>
               </form>
             )}
