@@ -1,0 +1,339 @@
+/* Figma: 12 Live Class (node 9:35). A dark room so the video stands out. */
+.room {
+  min-height: 100vh;
+  padding: 20px 32px 40px;
+  background: var(--tamarind-brown);
+  color: var(--coconut-cream);
+}
+
+/* Class bar */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.liveTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: var(--live-red);
+  font: 500 15px/20px var(--font-heading);
+}
+
+.quietTag {
+  background: var(--palm-sugar);
+  color: var(--tamarind-brown);
+}
+
+.classTitle {
+  margin: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.elapsed {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.afterLink {
+  color: var(--turmeric);
+  font: 500 18px/24px var(--font-heading);
+}
+
+.banner {
+  margin: 16px 0 0;
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: var(--turmeric);
+  color: var(--tamarind-brown);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 952px) minmax(0, 472px);
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.stage {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+/* Video placeholder with the two small tiles */
+.video {
+  position: relative;
+  min-height: 600px;
+  border-radius: 28px;
+  background: var(--palm-sugar);
+  color: var(--tamarind-brown);
+}
+
+.teacherTag {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+}
+
+.tile {
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 17px;
+  border: 3px solid var(--coconut-cream);
+  border-radius: 28px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.selfTile {
+  top: 24px;
+  right: 24px;
+  width: 240px;
+  height: 180px;
+  background: var(--thai-tea);
+}
+
+.helperTile {
+  right: 44px;
+  bottom: 28px;
+  width: 158px;
+  height: 180px;
+  background: var(--turmeric);
+}
+
+.videoLabel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Helper captions */
+.captions {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: 28px;
+  background: #3b2819;
+}
+
+.captionLines {
+  display: grid;
+  gap: 4px;
+}
+
+.captionLines p {
+  margin: 0;
+}
+
+.captionSource {
+  color: var(--turmeric);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.captionThai {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.captionEnglish {
+  font-size: 20px;
+  line-height: 32px;
+}
+
+/* Call controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 4px;
+}
+
+.control {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--coconut-cream);
+  font: 400 14px/20px var(--font-body);
+  cursor: pointer;
+}
+
+.controlCircle {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--coconut-cream);
+}
+
+/* Muted or video stopped: the button turns turmeric. */
+.control[aria-pressed="true"]:not(.quiet) .controlCircle {
+  background: var(--turmeric);
+}
+
+.danger {
+  background: var(--live-red);
+}
+
+.control:focus-visible {
+  outline: 3px solid var(--turmeric);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+/* Recipe panel */
+.panel {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 32px;
+  background: var(--coconut-cream);
+  color: var(--tamarind-brown);
+}
+
+.panelHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.dot {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--palm-sugar);
+  border-radius: 999px;
+  background: var(--coconut-cream);
+  font: 500 16px/22px var(--font-heading);
+}
+
+.dotDone {
+  border-color: var(--pandan);
+  background: var(--pandan);
+}
+
+.stepNow {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 24px;
+  background: var(--turmeric);
+}
+
+.stepNowHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.stepNowDot {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--chili-coral);
+  color: var(--coconut-cream);
+}
+
+.stepNowText {
+  font: 500 28px/36px var(--font-heading);
+}
+
+.ask {
+  margin-top: 4px;
+}
+
+.helperControls {
+  display: grid;
+  gap: 12px;
+}
+
+.stepButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.endButton {
+  border-color: var(--live-red);
+  background: var(--live-red);
+  color: var(--coconut-cream);
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .room {
+    padding: 16px;
+  }
+
+  .video {
+    min-height: 360px;
+  }
+
+  .selfTile {
+    width: 120px;
+    height: 90px;
+    top: 64px;
+    right: 12px;
+  }
+
+  .helperTile {
+    width: 90px;
+    height: 110px;
+    right: 12px;
+    bottom: 56px;
+  }
+
+  .controls {
+    gap: 16px;
+  }
+}

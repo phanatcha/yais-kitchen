@@ -9,6 +9,7 @@ import Payment from "./pages/Book/Payment.jsx";
 import BookingConfirmed from "./pages/Book/BookingConfirmed.jsx";
 import MyClasses from "./pages/Account/MyClasses.jsx";
 import GetReady from "./pages/Cook/GetReady.jsx";
+import LiveClass from "./pages/Cook/LiveClass.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -29,7 +30,7 @@ export const router = createBrowserRouter([
       { path: "sign-in", element: <SignIn /> },
       { path: "my-classes", element: <MyClasses /> },
       { path: "my-classes/:bookingId/ready", element: <GetReady /> },
-      { path: "my-classes/:bookingId/live", element: page("12 Live Class") },
+      { path: "my-classes/:bookingId/live", element: <LiveClass /> },
       { path: "my-classes/:bookingId/after", element: page("13 After Class") },
 
       // Helper and Yai's family (new design)
