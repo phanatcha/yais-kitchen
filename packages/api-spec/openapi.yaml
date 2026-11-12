@@ -889,6 +889,54 @@ paths:
                     maxItems: 100
                     items: { $ref: "#/components/schemas/BookableTime" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/holds:
     post:
@@ -903,7 +951,15 @@ paths:
       x-rate-limit: { windowSeconds: 600, max: 10, key: ip }
       x-requirements: [FR-08]
       parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description:
+            Stable UUID per seat-hold attempt. Replaying with different seats
+            returns 409.
       requestBody:
         required: true
         content:
@@ -925,6 +981,42 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "429":
           $ref: "#/components/responses/TooManyRequests"
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/holds/{holdId}:
     parameters:
@@ -943,6 +1035,54 @@ paths:
         "204":
           description: Released, or already gone.
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/bookings:
     post:
@@ -976,6 +1116,42 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     get:
       tags: [Booking]
       operationId: listBookings
@@ -1008,6 +1184,48 @@ paths:
               schema: { $ref: "#/components/schemas/BookingPage" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/bookings/{bookingId}:
     parameters:
@@ -1031,6 +1249,42 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/bookings/{bookingId}/cancel:
     parameters:
@@ -1055,6 +1309,36 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/bookings/{bookingId}/checklist:
     parameters:
@@ -1089,6 +1373,36 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/bookings/{bookingId}/rating:
     parameters:
@@ -1115,6 +1429,30 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/ratings:
     get:
@@ -1137,6 +1475,48 @@ paths:
               schema: { $ref: "#/components/schemas/RatingPage" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/earnings:
     get:
@@ -1170,6 +1550,42 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /booking/payouts:
     get:
@@ -1198,6 +1614,134 @@ paths:
               schema: { $ref: "#/components/schemas/PayoutPage" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createPayout
+      summary: create Payout
+      tags:
+        - Booking
+      x-roles:
+        - admin
+      x-requirements:
+        - FR-30
+      responses:
+        "201":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payout"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - yaiId
+                - periodStart
+                - periodEnd
+              properties:
+                yaiId:
+                  $ref: "#/components/schemas/Id"
+                periodStart:
+                  type: string
+                  format: date
+                periodEnd:
+                  type: string
+                  format: date
 
   /booking/payouts/{payoutId}/mark-paid:
     parameters:
@@ -1236,6 +1780,36 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # ------------------------------------------------------------- payment
   /payment/intents:
@@ -1275,6 +1849,30 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "429":
           $ref: "#/components/responses/TooManyRequests"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /payment/webhooks/stripe:
     post:
@@ -1304,6 +1902,54 @@ paths:
         "200":
           description: Received.
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /payment/payments:
     get:
@@ -1329,6 +1975,48 @@ paths:
               schema: { $ref: "#/components/schemas/PaymentPage" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------- live class
   /live/class-times/{classTimeId}/join:
@@ -1355,6 +2043,36 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/class-times/{classTimeId}/state:
     parameters:
@@ -1375,6 +2093,42 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/class-times/{classTimeId}/step:
     parameters:
@@ -1384,7 +2138,9 @@ paths:
       operationId: setStep
       summary: Move the recipe to a step
       description: Every screen in the call shows the new step at once.
-      x-roles: [helper]
+      x-roles:
+        - helper
+        - admin
       x-requirements: [FR-17, FR-33]
       requestBody:
         required: true
@@ -1400,6 +2156,9 @@ paths:
                   minimum: 0
                   maximum: 49
                   examples: [2]
+                version:
+                  type: integer
+                  minimum: 0
       responses:
         "200":
           description: Moved.
@@ -1410,6 +2169,36 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/class-times/{classTimeId}/consent:
     parameters:
@@ -1418,7 +2207,11 @@ paths:
       tags: [Live class]
       operationId: giveRecordingConsent
       summary: Agree or refuse to be recorded
-      x-roles: [tourist, helper, family]
+      x-roles:
+        - tourist
+        - helper
+        - family
+        - admin
       x-requirements: [FR-19]
       requestBody:
         required: true
@@ -1439,6 +2232,42 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/class-times/{classTimeId}/recording:
     parameters:
@@ -1448,7 +2277,9 @@ paths:
       operationId: controlRecording
       summary: Start or stop recording
       description: Starting fails with 409 unless everyone in the call has agreed.
-      x-roles: [helper]
+      x-roles:
+        - helper
+        - admin
       x-requirements: [FR-19]
       requestBody:
         required: true
@@ -1470,6 +2301,36 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     get:
       tags: [Live class]
       operationId: getRecordingLink
@@ -1488,6 +2349,42 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/class-times/{classTimeId}/end:
     parameters:
@@ -1508,6 +2405,42 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /live/webhooks/livekit:
     post:
@@ -1536,6 +2469,54 @@ paths:
         "200":
           description: Received.
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # --------------------------------------------------------------- media
   /media/uploads:
@@ -1699,6 +2680,48 @@ paths:
               schema: { $ref: "#/components/schemas/Booking" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /internal/booking/class-times/{classTimeId}/participants:
     parameters:
@@ -1725,6 +2748,54 @@ paths:
                     maxItems: 6
                     items: { $ref: "#/components/schemas/Id" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /internal/media/signed-links:
     post:
@@ -1761,6 +2832,487 @@ paths:
               schema: { $ref: "#/components/schemas/SignedLink" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /payment/payments/{paymentId}:
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Id"
+    get:
+      operationId: getPaymentStatus
+      summary: get Payment Status
+      tags:
+        - Payment
+      x-roles:
+        - guest
+        - tourist
+        - admin
+      x-requirements:
+        - FR-11
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /payment/methods:
+    get:
+      operationId: getPaymentMethods
+      summary: get Payment Methods
+      tags:
+        - Payment
+      x-roles:
+        - guest
+        - tourist
+        - admin
+      x-requirements:
+        - FR-10
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - methods
+                properties:
+                  methods:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PaymentMethod"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /internal/payment/refunds:
+    post:
+      operationId: internalRequestRefund
+      summary: internal Request Refund
+      tags:
+        - Internal
+      x-roles: []
+      x-requirements:
+        - FR-23
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type:
+                  - object
+                  - "null"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - bookingId
+              properties:
+                bookingId:
+                  $ref: "#/components/schemas/Id"
+  /internal/payment/refunds/{refundId}:
+    parameters:
+      - name: refundId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Id"
+    get:
+      operationId: internalRefundStatus
+      summary: internal Refund Status
+      tags:
+        - Internal
+      x-roles: []
+      x-requirements:
+        - FR-23
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /live/class-times/{classTimeId}/captions:
+    parameters:
+      - $ref: "#/components/parameters/ClassTimeId"
+    post:
+      operationId: submitCaption
+      summary: submit Caption
+      tags:
+        - Live class
+      x-roles:
+        - helper
+        - admin
+      x-requirements:
+        - FR-18
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - segmentId
+                - language
+                - text
+                - final
+              properties:
+                segmentId:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                language:
+                  type: string
+                  enum:
+                    - th
+                    - en
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                final:
+                  type: boolean
+  /internal/media/recording-output:
+    post:
+      operationId: internalRecordingOutput
+      summary: internal Recording Output
+      tags:
+        - Internal
+      x-roles: []
+      x-requirements:
+        - FR-37
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - filepath
+                  - s3
+                properties:
+                  filepath:
+                    type: string
+                  s3:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - room
+              properties:
+                room:
+                  type: string
+                  maxLength: 100
+      description:
+        Media-owned private Egress output configuration. Return 503 until
+        private storage and 90-day retention are configured.
+  /payment/refunds:
+    get:
+      operationId: listRefunds
+      tags:
+        - Payment
+      summary: Admin refund audit records
+      x-roles:
+        - admin
+      x-requirements:
+        - FR-30
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - nextCursor
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  nextCursor:
+                    $ref: "#/components/schemas/NextCursor"
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: State conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Business validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unexpected server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Dependency unavailable; retry later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   securitySchemes:
@@ -2065,17 +3617,20 @@ components:
               type: string
               format: uri
               examples:
-                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/thumb.webp"
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/t\
+                  humb.webp"
             card:
               type: string
               format: uri
               examples:
-                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/card.webp"
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/c\
+                  ard.webp"
             hero:
               type: string
               format: uri
               examples:
-                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/hero.webp"
+                - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d7/h\
+                  ero.webp"
     Video:
       description: |
         Catalog keeps only the asset ID and builds the links from media's
@@ -2089,12 +3644,14 @@ components:
           type: string
           format: uri
           examples:
-            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/video.mp4"
+            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/video\
+              .mp4"
         posterUrl:
           type: string
           format: uri
           examples:
-            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/poster.webp"
+            - "https://media.yaiskitchen.example/6650a1f2c3d4e5f6a7b8c9d8/poste\
+              r.webp"
         durationSeconds: { type: integer, examples: [45] }
     Upload:
       type: object
@@ -2106,7 +3663,8 @@ components:
           format: uri
           description: Send the file here with HTTP PUT.
           examples:
-            - "https://storage.yaiskitchen.example/uploads/6650a1f2c3d4e5f6a7b8c9d7?signature=mock"
+            - "https://storage.yaiskitchen.example/uploads/6650a1f2c3d4e5f6a7b8\
+              c9d7?signature=mock"
         headers:
           type: object
           description: Headers to send with the PUT.
@@ -2139,7 +3697,8 @@ components:
           type: string
           format: uri
           examples:
-            - "https://storage.yaiskitchen.example/recordings/6650a1f2c3d4e5f6a7b8c9d2.mp4?signature=mock"
+            - "https://storage.yaiskitchen.example/recordings/6650a1f2c3d4e5f6a\
+              7b8c9d2.mp4?signature=mock"
         expiresAt: { $ref: "#/components/schemas/DateTime" }
 
     # catalog
@@ -2172,7 +3731,9 @@ components:
           $ref: "#/components/schemas/Money"
         isSample:
           type: boolean
-          description: True for made-up example Yais. The site shows a "Sample" label on them.
+          description:
+            True for made-up example Yais. The site shows a "Sample" label on
+            them.
           examples: [true]
     Yai:
       allOf:
@@ -2189,7 +3750,8 @@ components:
               type: string
               maxLength: 4000
               examples:
-                - "Yai Somsri has cooked khao soi for her family in Chiang Mai for fifty years."
+                - "Yai Somsri has cooked khao soi for her family in Chiang Mai
+                  for fifty years."
             photos:
               type: array
               maxItems: 12
@@ -2313,7 +3875,9 @@ components:
             needsOwnKitchen:
               type: boolean
               const: true
-              description: Tourists cook in their own kitchen, so the page tells them before they pay.
+              description:
+                Tourists cook in their own kitchen, so the page tells them before
+                they pay.
             previewClip: { $ref: "#/components/schemas/Video" }
             isVisible: { type: boolean }
             isFeatured: { type: boolean }
@@ -2415,7 +3979,8 @@ components:
           type: string
           maxLength: 1000
           examples:
-            - "Don't rush the paste. My mother always said the smell tells you when."
+            - "Don't rush the paste. My mother always said the smell tells you
+              when."
         yaiTip:
           type: string
           maxLength: 500
@@ -2554,7 +4119,8 @@ components:
                       minLength: 1
                       maxLength: 3000
                       examples:
-                        - "Yes. You cook along at home, so you need a stove and the ingredients on your shopping list."
+                        - "Yes. You cook along at home, so you need a stove and
+                          the ingredients on your shopping list."
     ApplicationStage:
       type: string
       enum:
@@ -2659,6 +4225,7 @@ components:
         - completed
         - cancelled
         - expired
+        - refunded
     Booking:
       type: object
       required:
@@ -2705,6 +4272,23 @@ components:
           examples: [["egg-noodles"]]
         isRated: { type: boolean }
         createdAt: { $ref: "#/components/schemas/DateTime" }
+        expiresAt:
+          $ref: "#/components/schemas/DateTime"
+        holdId:
+          type: string
+        refundStatus:
+          type: string
+        joinPermitted:
+          type: boolean
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ingredient"
+        guestSessionId:
+          type: string
+          description:
+            Only included in trusted internal responses, never public booking
+            responses.
     BookingPage:
       type: object
       required: [items, nextCursor]
@@ -2815,6 +4399,17 @@ components:
         reference:
           type: string
           examples: ["PP20261115-0042"]
+        refundAdjustments:
+          type: array
+          items:
+            type: object
+            properties:
+              bookingId:
+                $ref: "#/components/schemas/Id"
+              amount:
+                type: integer
+              recoveryRequired:
+                type: boolean
     PayoutPage:
       type: object
       required: [items, nextCursor]
@@ -2920,3 +4515,6 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DateTime"
             - type: "null"
+        version:
+          type: integer
+          minimum: 0
