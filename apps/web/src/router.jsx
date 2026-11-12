@@ -11,6 +11,7 @@ import MyClasses from "./pages/Account/MyClasses.jsx";
 import GetReady from "./pages/Cook/GetReady.jsx";
 import LiveClass from "./pages/Cook/LiveClass.jsx";
 import AfterClass from "./pages/Cook/AfterClass.jsx";
+import HelperClasses from "./pages/Helper/HelperClasses.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -35,7 +36,7 @@ export const router = createBrowserRouter([
       { path: "my-classes/:bookingId/after", element: <AfterClass /> },
 
       // Helper and Yai's family (new design)
-      { path: "helper", element: page("Helper: my classes") },
+      { path: "helper", element: <HelperClasses /> },
       {
         path: "helper/classes/:classTimeId/live",
         element: page("Helper: live class"),

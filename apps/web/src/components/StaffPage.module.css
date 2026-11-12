@@ -1,0 +1,128 @@
+.tag {
+  display: flex;
+  margin: 4px 0 26px auto;
+}
+
+.lead {
+  max-width: 872px;
+  margin-top: 14px;
+}
+
+.body {
+  display: grid;
+  gap: 48px;
+  margin-top: 40px;
+}
+
+/* Rows used by the helper and family lists, like the My Classes class row. */
+.list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  padding: 24px 32px;
+}
+
+.rowInfo {
+  display: grid;
+  flex: 1;
+  justify-items: start;
+  gap: 6px;
+  min-width: 240px;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusTag {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font: 500 15px/20px var(--font-heading);
+}
+
+.turmeric {
+  background: var(--turmeric);
+}
+
+.pandan {
+  background: var(--pandan);
+}
+
+.outlined {
+  padding: 5px 14px;
+  border: 2px solid var(--tamarind-brown);
+}
+
+.section {
+  display: grid;
+  gap: 16px;
+}
+
+/* Tabs for the family pages */
+.tabs {
+  margin-top: 32px;
+}
+
+.tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Simple data tables (earnings, payouts) */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 2px solid var(--palm-sugar);
+}
+
+.table th {
+  font: 500 18px/24px var(--font-heading);
+}
+
+.table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tfoot td {
+  border-bottom: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.table tfoot .num {
+  color: var(--chili-coral-dark);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+@media (max-width: 700px) {
+  .row {
+    padding: 16px;
+  }
+}
