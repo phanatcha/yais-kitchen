@@ -111,6 +111,16 @@ channels:
       recordingReady: { $ref: "#/components/messages/RecordingReady" }
     bindings:
       $ref: "#/components/channelBindings/eventsExchange"
+  paymentRefundFailed:
+    address: payment.refund.failed
+    messages:
+      PaymentRefundFailed:
+        $ref: "#/components/messages/PaymentRefundFailed"
+  liveStateChanged:
+    address: live_class.state.changed
+    messages:
+      LiveStateChanged:
+        $ref: "#/components/messages/LiveStateChanged"
 
 operations:
   # auth.code_requested
@@ -137,7 +147,8 @@ operations:
   bookingReceivesUserDeleted:
     action: receive
     channel: { $ref: "#/channels/userDeleted" }
-    summary: Booking removes the name, email, checklist and rating comments from that person's bookings.
+    summary: Booking removes the name, email, checklist and rating comments from
+      that person's bookings.
     tags: [{ $ref: "#/components/tags/booking" }]
     x-requirements: [privacy]
   liveClassReceivesUserDeleted:
@@ -163,7 +174,9 @@ operations:
   notificationReceivesApplicationReceived:
     action: receive
     channel: { $ref: "#/channels/applicationReceived" }
-    summary: Notification emails the family that the application arrived, and tells Admin.
+    summary:
+      Notification emails the family that the application arrived, and tells
+      Admin.
     tags: [{ $ref: "#/components/tags/notification" }]
     x-requirements: [FR-24]
 
@@ -201,7 +214,9 @@ operations:
   bookingSendsBookingCancelled:
     action: send
     channel: { $ref: "#/channels/bookingCancelled" }
-    summary: A paid booking was cancelled by the tourist, by Admin or because its class time was cancelled.
+    summary:
+      A paid booking was cancelled by the tourist, by Admin or because its
+      class time was cancelled.
     tags: [{ $ref: "#/components/tags/booking" }]
     x-requirements: [FR-23, FR-30]
   paymentReceivesBookingCancelled:
@@ -243,7 +258,9 @@ operations:
   bookingReceivesPaymentFailed:
     action: receive
     channel: { $ref: "#/channels/paymentFailed" }
-    summary: Booking notes the failure. The seats stay held until the hold runs out, so the tourist can try again.
+    summary:
+      Booking notes the failure. The seats stay held until the hold runs out,
+      so the tourist can try again.
     tags: [{ $ref: "#/components/tags/booking" }]
     x-requirements: [FR-11]
 
@@ -302,6 +319,34 @@ operations:
     summary: Notification tells the tourists the recording is on After Class.
     tags: [{ $ref: "#/components/tags/notification" }]
     x-requirements: [FR-20]
+  paymentRefundFailedsend:
+    action: send
+    channel:
+      $ref: "#/channels/paymentRefundFailed"
+    summary: payment sends payment.refund.failed
+    x-requirements:
+      - FR-23
+  paymentRefundFailedreceive:
+    action: receive
+    channel:
+      $ref: "#/channels/paymentRefundFailed"
+    summary: booking receives payment.refund.failed
+    x-requirements:
+      - FR-23
+  liveStateChangedsend:
+    action: send
+    channel:
+      $ref: "#/channels/liveStateChanged"
+    summary: live-class sends live_class.state.changed
+    x-requirements:
+      - FR-14
+  liveStateChangedreceive:
+    action: receive
+    channel:
+      $ref: "#/channels/liveStateChanged"
+    summary: live-class receives live_class.state.changed
+    x-requirements:
+      - FR-14
 
 components:
   securitySchemes:
@@ -588,6 +633,52 @@ components:
                   deleteAfter:
                     description: 90 days after the class.
                     allOf: [{ $ref: "#/components/schemas/DateTime" }]
+    PaymentRefundFailed:
+      name: payment.refund.failed
+      title: payment.refund.failed
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type:
+                const: payment.refund.failed
+              data:
+                type: object
+                required:
+                  - paymentId
+                  - bookingId
+                  - reason
+                properties:
+                  paymentId:
+                    $ref: "#/components/schemas/Id"
+                  bookingId:
+                    $ref: "#/components/schemas/Id"
+                  reason:
+                    type: string
+    LiveStateChanged:
+      name: live_class.state.changed
+      title: live_class.state.changed
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type:
+                const: live_class.state.changed
+              data:
+                type: object
+                required:
+                  - classTimeId
+                  - version
+                  - message
+                properties:
+                  classTimeId:
+                    $ref: "#/components/schemas/Id"
+                  version:
+                    type: integer
+                  message:
+                    type: object
 
   schemas:
     Envelope:

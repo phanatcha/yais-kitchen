@@ -18,6 +18,13 @@ const SECRET_FIELDS = [
   'headers["x-internal-token"]',
   "data.code",
   "event.data.code",
+  "clientSecret",
+  "client_secret",
+  "data.clientSecret",
+  "apiKey",
+  "apiSecret",
+  "stripeSecretKey",
+  "signedUrl",
 ];
 
 /**

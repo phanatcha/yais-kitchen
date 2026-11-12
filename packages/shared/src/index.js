@@ -35,3 +35,5 @@ export {
 export { createLogger, logContext } from "./logger.js";
 export { createApp, startService } from "./service.js";
 export { API_SPEC_PATH, loadApiSpec, specValidator } from "./spec.js";
+export { createDurable, internalClient } from "./durable.js";
+export { runBackend } from "./worker.js";
