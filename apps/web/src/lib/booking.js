@@ -158,6 +158,14 @@ export function useUpdateChecklist(bookingId) {
   });
 }
 
+/** GET /live/class-times/{classTimeId}/recording: a one-hour private link. */
+export function useRecordingLink() {
+  return useMutation({
+    mutationFn: (classTimeId) =>
+      api(`/live/class-times/${classTimeId}/recording`),
+  });
+}
+
 /** POST /booking/bookings/{bookingId}/rating: once per booking. */
 export function useRateBooking(bookingId) {
   const queryClient = useQueryClient();

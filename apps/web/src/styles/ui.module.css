@@ -252,7 +252,8 @@ textarea.input {
 
 /* Coral on rice-paper is 4.2:1, so links on cards use the darker coral (5.6:1). */
 .notice .link,
-.card .link {
+.card .link,
+.card .error {
   color: var(--chili-coral-dark);
 }
 

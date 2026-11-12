@@ -18,3 +18,9 @@
 .devNav a {
   color: var(--tamarind-brown);
 }
+
+@media print {
+  .devNav {
+    display: none;
+  }
+}
