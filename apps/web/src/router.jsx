@@ -14,6 +14,7 @@ import AfterClass from "./pages/Cook/AfterClass.jsx";
 import HelperClasses from "./pages/Helper/HelperClasses.jsx";
 import HelperLive from "./pages/Helper/HelperLive.jsx";
 import FamilyTimes from "./pages/Family/FamilyTimes.jsx";
+import FamilyBookings from "./pages/Family/FamilyBookings.jsx";
 
 const page = (title) => <PagePlaceholder title={title} />;
 
@@ -41,7 +42,7 @@ export const router = createBrowserRouter([
       { path: "helper", element: <HelperClasses /> },
       { path: "helper/classes/:classTimeId/live", element: <HelperLive /> },
       { path: "family/times", element: <FamilyTimes /> },
-      { path: "family/bookings", element: page("Family: bookings") },
+      { path: "family/bookings", element: <FamilyBookings /> },
       { path: "family/earnings", element: page("Family: earnings") },
 
       { path: "*", element: <NotFound /> },
