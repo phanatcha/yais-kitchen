@@ -6,8 +6,8 @@
 export function createLinks(webOrigin) {
   const page = (path) => new URL(path, webOrigin).href;
   return {
-    getReady: (bookingId) => page(`/bookings/${bookingId}/get-ready`),
-    afterClass: (bookingId) => page(`/bookings/${bookingId}/after-class`),
+    getReady: (bookingId) => page(`/my-classes/${bookingId}/ready`),
+    afterClass: (bookingId) => page(`/my-classes/${bookingId}/after`),
     adminApplication: (applicationId) =>
       page(`/admin/applications/${applicationId}`),
   };

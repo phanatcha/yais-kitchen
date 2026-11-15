@@ -153,7 +153,7 @@ describe("booking confirmed", () => {
       "Paid: THB 1,800",
       "- Fresh egg noodles (บะหมี่ไข่): 200 g",
       "- Coconut milk (กะทิ): 400 ml",
-      "http://localhost:5173/bookings/6650a1f2c3d4e5f6a7b8c9e1/get-ready",
+      "http://localhost:5173/my-classes/6650a1f2c3d4e5f6a7b8c9e1/ready",
       "We'll remind you a day before class and again an hour before.",
     ]) {
       expect(email.text).toContain(line);
@@ -295,7 +295,7 @@ describe("after class", () => {
       "Thank you for cooking with Yai Somsri",
     );
     expect(mailer.sent[0].text).toContain(
-      "http://localhost:5173/bookings/6650a1f2c3d4e5f6a7b8c9e1/after-class",
+      "http://localhost:5173/my-classes/6650a1f2c3d4e5f6a7b8c9e1/after",
     );
   });
 

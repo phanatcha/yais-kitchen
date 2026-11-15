@@ -78,8 +78,8 @@ It sends a sample of every event, and the emails appear at http://localhost:8025
 
 `src/links.js` builds them, and the web app's routes must match:
 
-- `/bookings/{bookingId}/get-ready`
-- `/bookings/{bookingId}/after-class`
+- `/my-classes/{bookingId}/ready`
+- `/my-classes/{bookingId}/after`
 - `/admin/applications/{applicationId}`
 
 ## Tests
