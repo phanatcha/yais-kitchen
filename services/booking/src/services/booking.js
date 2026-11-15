@@ -80,6 +80,14 @@ export function createBookingService({
     if (!b) throw notFound();
     return b;
   }
+  // A helper sees only the class times they are assigned to, checked against
+  // catalog because an admin can change the helper after people book.
+  async function assigned(classTimeId, user) {
+    if (!classTimeId) throw badRequest("Choose a class time.");
+    const ctx = await catalog(`/internal/catalog/class-times/${classTimeId}`);
+    if (ctx.classTime.helperId !== user.id) throw forbidden();
+    return classTimeId;
+  }
   function view(b, user) {
     const row = b.toObject ? b.toObject() : b;
     const { _id, email, guestSessionId, ...rest } = row;
@@ -88,8 +96,9 @@ export function createBookingService({
     return {
       ...rest,
       id: _id,
-      guestName:
-        user?.role === "family" ? row.guestName.split(" ")[0] : row.guestName,
+      guestName: ["family", "helper"].includes(user?.role)
+        ? row.guestName.split(" ")[0]
+        : row.guestName,
       startsAt: iso(row.startsAt),
       endsAt: iso(row.endsAt),
       createdAt: iso(row.createdAt),
@@ -258,7 +267,7 @@ export function createBookingService({
         );
       });
     },
-    async create(holdId, user) {
+    async create(holdId, user, details = {}) {
       const h = await Hold.findById(holdId);
       if (!h) throw notFound();
       return d.transaction(async (session) => {
@@ -292,6 +301,9 @@ export function createBookingService({
               status: "pending_payment",
               ingredients: ctx.ingredients,
               checkedIngredientIds: [],
+              language: details.language ?? "en",
+              allergies: details.allergies,
+              cookingExperience: details.cookingExperience,
             },
           ],
           { session },
@@ -311,6 +323,8 @@ export function createBookingService({
     async list(query, user) {
       const filter = {};
       if (user.role === "family") filter.yaiId = user.yaiId || "unassigned";
+      else if (user.role === "helper")
+        filter.classTimeId = await assigned(query.classTimeId, user);
       else if (user.role !== "admin") filter.userId = user.id;
       for (const key of ["status", "classTimeId", "yaiId"])
         if (query[key]) {
@@ -370,6 +384,7 @@ export function createBookingService({
         if (b.isRated)
           throw conflict("already_rated", "This booking is already rated.");
         b.isRated = true;
+        b.stars = input.stars;
         await b.save({ session });
         const [r] = await Rating.create(
           [

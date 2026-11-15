@@ -28,7 +28,9 @@ export function createBookingApp(options) {
     res.status(204).end();
   });
   routes.post("/booking/bookings", async (req, res) =>
-    res.status(201).json(await service.create(req.body.holdId, req.user)),
+    res
+      .status(201)
+      .json(await service.create(req.body.holdId, req.user, req.body)),
   );
   routes.get("/booking/bookings", async (req, res) =>
     res.json(await service.list(req.query, req.user)),

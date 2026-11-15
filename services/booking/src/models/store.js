@@ -55,6 +55,10 @@ export function createStore(connection) {
         checkedIngredientIds: [String],
         ingredients: [mixed],
         isRated: { type: Boolean, default: false },
+        stars: Number,
+        language: String,
+        allergies: String,
+        cookingExperience: String,
         payoutId: String,
       },
       [
