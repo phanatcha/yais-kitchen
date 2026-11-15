@@ -7,6 +7,7 @@ import starIcon from "../../assets/icon-star.svg";
 import { ApiError } from "../../lib/api.js";
 import { useMe, useSignOut } from "../../lib/auth.js";
 import { useBookings } from "../../lib/booking.js";
+import { readCheckout } from "../../lib/checkout.js";
 import { formatThaiLongDate, formatThaiTime } from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./MyClasses.module.css";
@@ -176,7 +177,9 @@ function UpcomingRow({ booking, index, now }) {
         `About ${booking.class.durationMinutes} minutes. A helper interprets for you.`,
       ]}
       actions={
-        booking.status === "cancelled" ? null : (
+        booking.status === "pending_payment" ? (
+          <PendingActions bookingId={booking.id} />
+        ) : booking.status === "cancelled" ? null : (
           <>
             {joinOpen ? (
               <Link
@@ -198,6 +201,26 @@ function UpcomingRow({ booking, index, now }) {
         )
       }
     />
+  );
+}
+
+/**
+ * Not paid yet, so nothing to get ready for. The checkout lives in the tab
+ * that started it, so only that tab can go back to Payment.
+ */
+function PendingActions({ bookingId }) {
+  const [inThisTab] = useState(() => readCheckout().booking?.id === bookingId);
+  return (
+    <>
+      {inThisTab && (
+        <Link className={ui.primary} to="/book/payment">
+          Finish paying
+        </Link>
+      )}
+      <p className={ui.small}>
+        We&apos;ll confirm this class once your payment goes through.
+      </p>
+    </>
   );
 }
 
