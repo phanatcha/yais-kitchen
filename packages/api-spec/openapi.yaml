@@ -1107,6 +1107,10 @@ paths:
               additionalProperties: false
               properties:
                 holdId: { type: string, minLength: 20, maxLength: 64 }
+                language: { $ref: "#/components/schemas/HelperLanguage" }
+                allergies: { $ref: "#/components/schemas/Allergies" }
+                cookingExperience:
+                  $ref: "#/components/schemas/CookingExperience"
       responses:
         "201":
           description: Booking waiting for payment.
@@ -1155,12 +1159,14 @@ paths:
     get:
       tags: [Booking]
       operationId: listBookings
-      summary: My Classes, a Yai's bookings, or every booking
+      summary: My Classes, a Yai's bookings, a helper's class, or every booking
       description: |
         A tourist sees their own bookings. A family sees bookings for their
-        Yai, with first names only. Admin sees everything.
-      x-roles: [tourist, family, admin]
-      x-requirements: [FR-23, FR-30, FR-35]
+        Yai, with first names only. A helper sends `classTimeId` for a class
+        time assigned to them and sees its bookings with first names only,
+        including each guest's language and allergies. Admin sees everything.
+      x-roles: [tourist, family, helper, admin]
+      x-requirements: [FR-23, FR-30, FR-32, FR-35]
       parameters:
         - name: when
           in: query
@@ -3521,6 +3527,21 @@ components:
       minimum: 1
       maximum: 6
       examples: [2]
+    HelperLanguage:
+      description: The language the helper speaks with the guest.
+      type: string
+      enum: [en, zh, ja, ko, fr, de, es]
+      default: en
+    Allergies:
+      description: What the guest can't eat, in their own words.
+      type: string
+      maxLength: 500
+      examples: ["Peanuts and shellfish"]
+    CookingExperience:
+      description: |
+        `new` is new to cooking, `some` cooks a little, `lots` cooks a lot.
+      type: string
+      enum: [new, some, lots]
     Error:
       type: object
       required: [error]
@@ -4271,6 +4292,15 @@ components:
           items: { type: string }
           examples: [["egg-noodles"]]
         isRated: { type: boolean }
+        stars:
+          description: The guest's rating. Only there once `isRated` is true.
+          type: integer
+          minimum: 1
+          maximum: 5
+        language: { $ref: "#/components/schemas/HelperLanguage" }
+        allergies: { $ref: "#/components/schemas/Allergies" }
+        cookingExperience:
+          $ref: "#/components/schemas/CookingExperience"
         createdAt: { $ref: "#/components/schemas/DateTime" }
         expiresAt:
           $ref: "#/components/schemas/DateTime"

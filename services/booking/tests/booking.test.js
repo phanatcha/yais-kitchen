@@ -113,6 +113,63 @@ describe("booking transactions and API", () => {
     expect(marked.status, JSON.stringify(marked.body)).toBe(200);
     expect(marked.body.status).toBe("paid");
   });
+  it("keeps guest details and stars, and shows them to the assigned helper", async () => {
+    const held = await hold(2);
+    const created = await request(app)
+      .post("/booking/bookings")
+      .set("Authorization", token)
+      .set("Idempotency-Key", randomUUID())
+      .send({
+        holdId: held.id,
+        language: "ja",
+        allergies: "Peanuts",
+        cookingExperience: "new",
+      });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    expect(created.body).toMatchObject({
+      language: "ja",
+      allergies: "Peanuts",
+      cookingExperience: "new",
+    });
+    await paid(created.body);
+    h.clock.time = +new Date(created.body.endsAt);
+    await api.handlers["live_class.ended"](
+      event("live_class.ended", { classTimeId: ids.time }),
+    );
+    await request(app)
+      .post(`/booking/bookings/${created.body.id}/rating`)
+      .set("Authorization", token)
+      .send({ stars: 4 });
+    const mine = await request(app)
+      .get("/booking/bookings?when=past")
+      .set("Authorization", token);
+    expect(mine.body.items[0]).toMatchObject({ isRated: true, stars: 4 });
+
+    const helper = await h.auth("helper", ids.helper);
+    const seen = await request(app)
+      .get(`/booking/bookings?classTimeId=${ids.time}`)
+      .set("Authorization", helper);
+    expect(seen.status, JSON.stringify(seen.body)).toBe(200);
+    expect(seen.body.items).toHaveLength(1);
+    expect(seen.body.items[0]).toMatchObject({
+      guestName: "Alex",
+      guests: 2,
+      language: "ja",
+      allergies: "Peanuts",
+    });
+    expect(
+      (await request(app).get("/booking/bookings").set("Authorization", helper))
+        .status,
+    ).toBe(400);
+    const otherHelper = await h.auth("helper", ids.other);
+    expect(
+      (
+        await request(app)
+          .get(`/booking/bookings?classTimeId=${ids.time}`)
+          .set("Authorization", otherHelper)
+      ).status,
+    ).toBe(403);
+  });
   it("keeps manual paid-payout history while recording refund recovery", async () => {
     const booking = await booked();
     await paid(booking);

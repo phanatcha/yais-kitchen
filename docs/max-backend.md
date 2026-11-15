@@ -47,22 +47,22 @@ Read each service's `.env.example` for the exact names.
 
 ## Booking
 
-| Route                                  | Permission / behavior                                                              |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `GET /booking/class-times?classId=...` | Public; catalog sessions plus seats left, UTC and Thailand display time            |
-| `POST /booking/holds`                  | Public capability checkout; `{classTimeId, guests}`, required `Idempotency-Key`    |
-| `DELETE /booking/holds/{holdId}`       | Public secret capability; releases an unconverted hold                             |
-| `POST /booking/bookings`               | Guest or tourist; `{holdId}`, `Idempotency-Key`; verified identity owns booking    |
-| `GET /booking/bookings`                | Tourist's My Classes, family's Yai or admin; `when`, `status`, session/Yai filters |
-| `GET /booking/bookings/{id}`           | Owner, matching guest checkout `sid`, associated family or admin                   |
-| `POST /booking/bookings/{id}/cancel`   | Tourist owner until 48h before start; admin override                               |
-| `PUT /booking/bookings/{id}/checklist` | Tourist owner; `{checkedIngredientIds:[...]}`                                      |
-| `POST /booking/bookings/{id}/rating`   | Tourist owner of completed booking; one rating                                     |
-| `GET /booking/ratings`                 | Admin                                                                              |
-| `GET /booking/earnings?yaiId=...`      | Associated family or admin; `groupBy=class                                         | month`, date bounds |
-| `GET /booking/payouts`                 | Associated family or admin                                                         |
-| `POST /booking/payouts`                | Admin; `{yaiId,periodStart,periodEnd}` creates a manual payout batch               |
-| `POST /booking/payouts/{id}/mark-paid` | Admin; `{reference}` records a manual PromptPay transfer                           |
+| Route                                  | Permission / behavior                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `GET /booking/class-times?classId=...` | Public; catalog sessions plus seats left, UTC and Thailand display time                    |
+| `POST /booking/holds`                  | Public capability checkout; `{classTimeId, guests}`, required `Idempotency-Key`            |
+| `DELETE /booking/holds/{holdId}`       | Public secret capability; releases an unconverted hold                                     |
+| `POST /booking/bookings`               | Guest or tourist; `{holdId, language?, allergies?, cookingExperience?}`, `Idempotency-Key` |
+| `GET /booking/bookings`                | Tourist's My Classes, family's Yai, assigned helper's class (`classTimeId`) or admin       |
+| `GET /booking/bookings/{id}`           | Owner, matching guest checkout `sid`, associated family or admin                           |
+| `POST /booking/bookings/{id}/cancel`   | Tourist owner until 48h before start; admin override                                       |
+| `PUT /booking/bookings/{id}/checklist` | Tourist owner; `{checkedIngredientIds:[...]}`                                              |
+| `POST /booking/bookings/{id}/rating`   | Tourist owner of completed booking; one rating                                             |
+| `GET /booking/ratings`                 | Admin                                                                                      |
+| `GET /booking/earnings?yaiId=...`      | Associated family or admin; `groupBy=class                                                 | month`, date bounds |
+| `GET /booking/payouts`                 | Associated family or admin                                                                 |
+| `POST /booking/payouts`                | Admin; `{yaiId,periodStart,periodEnd}` creates a manual payout batch                       |
+| `POST /booking/payouts/{id}/mark-paid` | Admin; `{reference}` records a manual PromptPay transfer                                   |
 
 Lists use `limit` (maximum 50), `cursor`, and return `items,nextCursor`.
 Never send arbitrary user IDs, prices or statuses from the browser. Public hold
