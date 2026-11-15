@@ -1,0 +1,62 @@
+.card {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 16px 24px;
+  border-radius: 32px;
+  background: var(--rice-paper);
+  color: var(--tamarind-brown);
+  text-decoration: none;
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.card:hover {
+  box-shadow: 0 10px 24px rgb(74 50 34 / 0.14);
+  transform: translateY(-3px);
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}
+
+.portrait {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.name {
+  margin: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.region {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.price {
+  margin: 0;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.sample {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}

@@ -1,4 +1,6 @@
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useMatches } from "react-router";
+import Footer from "./components/site/Footer.jsx";
+import Nav from "./components/site/Nav.jsx";
 import styles from "./App.module.css";
 
 // The mock server only accepts 24-character hex IDs, so the demo links use
@@ -23,22 +25,37 @@ const devLinks = [
   ["/family/earnings", "Family earnings"],
 ];
 
+/**
+ * The site frame: Nav on every page but the live class, and the Footer on
+ * the pages whose route sets `handle: { footer: true }`.
+ */
 export default function App() {
+  const matches = useMatches();
+  const live = matches.some((m) => m.handle?.live);
+  const footer = matches.some((m) => m.handle?.footer);
+
   return (
     <>
-      {/* Temporary dev menu. Replace with Patter's Nav. */}
-      <nav aria-label="Dev pages" className={styles.devNav}>
-        <ul>
-          {devLinks.map(([to, label]) => (
-            <li key={to}>
-              <Link to={to}>{label}</Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <main>
+      <a href="#main" className={styles.skip}>
+        Skip to content
+      </a>
+      {!live && <Nav />}
+      <main id="main">
         <Outlet />
       </main>
+      {footer && <Footer />}
+      {import.meta.env.DEV && (
+        // Pages without a link from the designed pages yet. Dev builds only.
+        <nav aria-label="Dev pages" className={styles.devNav}>
+          <ul>
+            {devLinks.map(([to, label]) => (
+              <li key={to}>
+                <Link to={to}>{label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </>
   );
 }

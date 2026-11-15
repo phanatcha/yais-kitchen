@@ -1,0 +1,96 @@
+.card {
+  position: relative;
+  display: block;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 32px;
+  color: var(--tamarind-brown);
+  text-decoration: none;
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.card:hover {
+  box-shadow: 0 10px 24px rgb(74 50 34 / 0.16);
+  transform: translateY(-3px);
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}
+
+.thaiTea {
+  background: var(--thai-tea);
+}
+
+.pandan {
+  background: var(--pandan);
+}
+
+.palm {
+  background: var(--palm-sugar);
+}
+
+.turmeric {
+  background: var(--turmeric);
+}
+
+.photo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 230px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sample {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* The cream tab with a rounded top-right corner. */
+.tab {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(350px, 85%);
+  padding: 16px 24px;
+  border-top-right-radius: 36px;
+  background: var(--coconut-cream);
+}
+
+.dish {
+  margin: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.yai {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.price {
+  color: var(--chili-coral);
+  font: 500 18px/24px var(--font-heading);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}

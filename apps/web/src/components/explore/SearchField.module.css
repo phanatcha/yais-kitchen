@@ -1,0 +1,33 @@
+.field {
+  position: relative;
+}
+
+.mark {
+  position: absolute;
+  top: 50%;
+  left: 22px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 64px;
+  padding: 0 24px 0 58px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 32px;
+  background: var(--coconut-cream);
+  color: var(--tamarind-brown);
+  font: 400 18px/28px var(--font-body);
+}
+
+.input::placeholder {
+  color: var(--tamarind-brown);
+  opacity: 1;
+}
+
+.input:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}

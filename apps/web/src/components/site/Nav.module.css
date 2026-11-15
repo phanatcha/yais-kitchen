@@ -1,0 +1,98 @@
+.bar {
+  background: var(--coconut-cream);
+}
+
+/* 96px tall, with the same 72px side margins as the pages at 1512px. */
+.nav {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: 1512px;
+  min-height: 96px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 5vw, 72px);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--tamarind-brown);
+  text-decoration: none;
+}
+
+.name {
+  font: 500 24px/32px var(--font-heading);
+}
+
+.thai {
+  font: 700 28px/44px var(--font-script);
+  color: var(--chili-coral);
+}
+
+.links {
+  display: flex;
+  gap: 40px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+  text-decoration: none;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 8px;
+}
+
+.link:hover {
+  text-decoration-line: underline;
+  text-decoration-color: var(--palm-sugar);
+}
+
+/* The page you are on. */
+.link[aria-current="page"] {
+  text-decoration-line: underline;
+  text-decoration-color: var(--turmeric);
+}
+
+.logo:focus-visible,
+.link:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.signIn {
+  white-space: nowrap;
+}
+
+/* The links move to their own row under the logo. */
+@media (max-width: 900px) {
+  .links {
+    order: 3;
+    flex-basis: 100%;
+    gap: 28px;
+    padding-bottom: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .thai {
+    display: none;
+  }
+
+  .links {
+    gap: 20px;
+  }
+}
+
+@media print {
+  .bar {
+    display: none;
+  }
+}

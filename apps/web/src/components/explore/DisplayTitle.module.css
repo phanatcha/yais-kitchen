@@ -1,0 +1,65 @@
+/* Kanit Bold 96/100 and Charmonman Bold 128/170, sitting on one baseline. */
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 18px;
+  margin: 0;
+}
+
+.main {
+  font: 700 96px/100px var(--font-heading);
+  text-transform: uppercase;
+}
+
+/* The script's tall line box would push the text below it down, so its
+   extra height is taken back; the zigzag hangs under the word. */
+.script {
+  position: relative;
+  margin-bottom: -46px;
+  color: var(--chili-coral);
+  font: 700 128px/170px var(--font-script);
+  white-space: nowrap;
+}
+
+.zigzag {
+  position: absolute;
+  top: calc(100% - 16px);
+  left: 8px;
+  max-width: none;
+}
+
+@media (max-width: 1100px) {
+  .main {
+    font-size: 72px;
+    line-height: 80px;
+  }
+
+  .script {
+    margin-bottom: -32px;
+    font-size: 96px;
+    line-height: 128px;
+  }
+
+  .zigzag {
+    width: 70%;
+    height: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .main {
+    font-size: 48px;
+    line-height: 54px;
+  }
+
+  .script {
+    margin-bottom: -20px;
+    font-size: 64px;
+    line-height: 88px;
+  }
+
+  .zigzag {
+    top: calc(100% - 8px);
+  }
+}

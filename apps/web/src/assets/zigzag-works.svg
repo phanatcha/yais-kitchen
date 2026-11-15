@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="320" height="38" viewBox="0 0 320 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Zigzag underline">
+<path id="Vector" d="M6 28L22 10L42 26L64 12L86 30L112 8L134 26L160 14L182 30L208 10L230 26L256 12L278 30L314 16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke="url(#paint0_linear_0_209)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_209" x1="-3.87043e-07" y1="7.80279e-06" x2="320" y2="7.80279e-06" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C8402D"/>
+<stop offset="0.55" stop-color="#FFD34D"/>
+<stop offset="1" stop-color="#B8CC9A"/>
+</linearGradient>
+</defs>
+</svg>

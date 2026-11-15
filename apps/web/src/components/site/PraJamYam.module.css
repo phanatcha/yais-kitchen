@@ -1,0 +1,8 @@
+/* 70 × 56 motifs about 72px apart, 8px from the top of the 72px band. */
+.band {
+  height: 72px;
+  background-image: url("../../assets/pra-jam-yam.svg");
+  background-position: 0 8px;
+  background-repeat: space no-repeat;
+  background-size: 70px 56px;
+}

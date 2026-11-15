@@ -194,6 +194,47 @@ textarea.input {
   font: 500 15px/20px var(--font-heading);
 }
 
+/* Tag styles Turmeric, Pandan and Tea: filled, no outline. */
+.tagTurmeric {
+  composes: tag;
+  border-color: var(--turmeric);
+  background: var(--turmeric);
+}
+
+.tagPandan {
+  composes: tag;
+  border-color: var(--pandan);
+  background: var(--pandan);
+}
+
+.tagTea {
+  composes: tag;
+  border-color: var(--thai-tea);
+  background: var(--thai-tea);
+}
+
+/* A filter drawn as a Tag: Outline, and Turmeric while it is on. */
+.chip {
+  composes: tag;
+  background: transparent;
+  color: var(--tamarind-brown);
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--rice-paper);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--turmeric);
+  background: var(--turmeric);
+}
+
+.chip:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}
+
 /*
  * Choice pills: a radio or checkbox drawn as an Outline button that turns
  * Turmeric when chosen ("A little / New to cooking / I cook a lot").
