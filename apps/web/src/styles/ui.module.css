@@ -167,6 +167,12 @@
   font: 400 18px/28px var(--font-body);
 }
 
+/* Muted tamarind: lighter than typed text, still 5:1 on cream. */
+.input::placeholder {
+  color: var(--tamarind-brown);
+  opacity: 0.7;
+}
+
 textarea.input {
   padding: 16px 20px;
   resize: vertical;

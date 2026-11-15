@@ -1,6 +1,5 @@
 import { createBrowserRouter } from "react-router";
 import App from "./App.jsx";
-import PagePlaceholder from "./components/PagePlaceholder.jsx";
 import NotFound from "./components/NotFound.jsx";
 import Home from "./pages/Explore/Home.jsx";
 import HowItWorks from "./pages/Explore/HowItWorks.jsx";
@@ -8,6 +7,8 @@ import BrowseYais from "./pages/Explore/BrowseYais.jsx";
 import YaiProfile from "./pages/Explore/YaiProfile.jsx";
 import BrowseClasses from "./pages/Explore/BrowseClasses.jsx";
 import ClassDetail from "./pages/Explore/ClassDetail.jsx";
+import BecomeAYai from "./pages/Explore/BecomeAYai.jsx";
+import HelpFaq from "./pages/Explore/HelpFaq.jsx";
 import SignIn from "./pages/SignIn/SignIn.jsx";
 import PickATime from "./pages/Book/PickATime.jsx";
 import YourDetails from "./pages/Book/YourDetails.jsx";
@@ -22,8 +23,6 @@ import HelperLive from "./pages/Helper/HelperLive.jsx";
 import FamilyTimes from "./pages/Family/FamilyTimes.jsx";
 import FamilyBookings from "./pages/Family/FamilyBookings.jsx";
 import FamilyEarnings from "./pages/Family/FamilyEarnings.jsx";
-
-const page = (title) => <PagePlaceholder title={title} />;
 
 // `footer` shows the site footer under the page; `live` hides the nav for
 // the full-screen class.
@@ -66,12 +65,8 @@ export const router = createBrowserRouter([
       { path: "my-classes/:bookingId/after", element: <AfterClass /> },
 
       // Help (Figma 16–17)
-      {
-        path: "become-a-yai",
-        element: page("Become a Yai"),
-        handle: withFooter,
-      },
-      { path: "help", element: page("Help and FAQ"), handle: withFooter },
+      { path: "become-a-yai", element: <BecomeAYai />, handle: withFooter },
+      { path: "help", element: <HelpFaq />, handle: withFooter },
 
       // Helper and Yai's family (new design)
       { path: "helper", element: <HelperClasses /> },

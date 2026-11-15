@@ -1,0 +1,128 @@
+.page {
+  padding-top: 70px;
+  padding-bottom: 120px;
+}
+
+.lead {
+  margin: 18px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+/* Topics in a 260px column, answers in a 660px column at 420px. */
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 660px);
+  gap: 88px;
+  align-items: start;
+  margin-top: 52px;
+}
+
+.side {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 28px;
+  padding-top: 8px;
+}
+
+.topics {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic {
+  display: block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+  text-decoration: none;
+}
+
+.topic:hover {
+  background: var(--rice-paper);
+}
+
+/* Coral on rice paper is 4.2:1, so the topic you are on uses the darker coral. */
+.topic[aria-current="true"] {
+  background: var(--rice-paper);
+  color: var(--chili-coral-dark);
+}
+
+.topic:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 2px;
+}
+
+.stillNeed {
+  display: grid;
+  gap: 8px;
+  padding: 24px;
+  border-radius: 32px;
+  background: var(--rice-paper);
+}
+
+.stillNeedTitle {
+  margin: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.answers {
+  display: grid;
+  gap: 64px;
+}
+
+.group {
+  scroll-margin-top: 24px;
+}
+
+.groupTitle {
+  margin: 0;
+  font: 600 40px/50px var(--font-heading);
+}
+
+.items {
+  margin: 0;
+}
+
+/* Figma "FAQ item": a question, its answer and a palm-sugar rule under them. */
+.item {
+  display: grid;
+  gap: 8px;
+  padding: 24px 0;
+  border-bottom: 2px solid var(--palm-sugar);
+}
+
+.question {
+  font: 500 20px/28px var(--font-heading);
+}
+
+.answer {
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding-top: 32px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .side {
+    position: static;
+  }
+
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}

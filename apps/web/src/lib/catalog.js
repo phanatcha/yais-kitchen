@@ -1,5 +1,43 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { api, withQuery } from "./api.js";
+
+/** FAQ groups in page order, with their headings. */
+export const FAQ_GROUPS = [
+  ["booking", "Booking"],
+  ["before_class", "Before class"],
+  ["during_class", "During class"],
+  ["after_class", "After class"],
+  ["becoming_a_yai", "Becoming a Yai"],
+];
+
+/** "before_class" → "before-class", for anchors such as /help#before-class. */
+export const faqAnchor = (groupId) => groupId.replaceAll("_", "-");
+
+/** GET /catalog/faq: the questions, in groups. */
+export function useFaq() {
+  return useQuery({
+    queryKey: ["catalog", "faq"],
+    queryFn: ({ signal }) => api("/catalog/faq", { signal }),
+  });
+}
+
+/** POST /catalog/applications: a family signs their Yai up. */
+export function useApply() {
+  return useMutation({
+    mutationFn: (application) =>
+      api("/catalog/applications", { method: "POST", body: application }),
+  });
+}
+
+/** Regions a Yai can live in, for the sign-up form. */
+export const REGION_OPTIONS = [
+  ["north", "Northern Thailand"],
+  ["northeast", "Isan (the northeast)"],
+  ["central", "Central Thailand"],
+  ["east", "Eastern Thailand"],
+  ["west", "Western Thailand"],
+  ["south", "Southern Thailand"],
+];
 
 /** Region filters on Browse Yais, in the Figma order. */
 export const REGION_FILTERS = [

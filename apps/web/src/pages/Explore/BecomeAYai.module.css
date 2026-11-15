@@ -1,0 +1,350 @@
+/* ---------- Hero: title left, photo and plate right ---------- */
+
+.hero {
+  padding-top: 20px;
+  padding-bottom: 80px;
+}
+
+.heroInner {
+  display: grid;
+  grid-template-columns: minmax(0, 640px) minmax(0, 660px);
+  justify-content: space-between;
+  align-items: start;
+  gap: 48px;
+}
+
+.heroText {
+  position: relative;
+  padding-top: 8px;
+}
+
+.sparkleSmall {
+  position: absolute;
+  top: -8px;
+  left: 632px;
+}
+
+/* Kanit Bold 96/100 lines, 96px apart, then Script/Display 120/150. */
+.title {
+  margin: 0;
+  font: 700 96px/100px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.titleLine {
+  display: block;
+}
+
+.titleLine + .titleLine {
+  margin-top: -4px;
+}
+
+.titleScript {
+  display: block;
+  margin: -20px 0 0 128px;
+  color: var(--chili-coral);
+  font: 700 120px/150px var(--font-script);
+  text-transform: none;
+}
+
+.zigzag {
+  display: block;
+  margin: 42px 0 0 128px;
+  max-width: calc(100% - 128px);
+  height: auto;
+}
+
+.lead {
+  max-width: 600px;
+  margin: 22px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+/* Drawn on a 660 × 664 grid: 1cqw is 6.6px at full size. */
+.collage {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 660 / 664;
+}
+
+.collage > * {
+  position: absolute;
+}
+
+.photo {
+  top: 0;
+  left: 0;
+  width: 63.64cqw;
+  height: 84.85cqw;
+}
+
+.ring {
+  top: 36.97cqw;
+  left: 39.39cqw;
+  width: 63.64cqw;
+  height: auto;
+}
+
+.plate {
+  top: 44.55cqw;
+  left: 46.97cqw;
+  width: 48.48cqw;
+  height: auto;
+}
+
+.dish {
+  top: 47.88cqw;
+  left: 50.3cqw;
+  width: 41.82cqw;
+  height: 41.82cqw;
+}
+
+.sparkleBig {
+  top: 3.64cqw;
+  left: 69.09cqw;
+  width: 10.91cqw;
+  height: auto;
+}
+
+/* ---------- Brown band: how it works for her ---------- */
+
+.how {
+  padding: 8px 0 66px;
+  background: var(--tamarind-brown);
+  color: var(--coconut-cream);
+}
+
+.howInner {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 600px);
+  justify-content: space-between;
+  gap: 48px;
+  padding-top: 44px;
+}
+
+.howTitle {
+  display: grid;
+  margin: 4px 0 0;
+  font: 700 60px/70px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.howScript {
+  margin-top: 2px;
+  color: var(--turmeric);
+  font: 700 64px/84px var(--font-script);
+  text-transform: none;
+}
+
+.howLead {
+  margin: 16px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 24px;
+}
+
+/* Steps start 118px apart. */
+.step + .step {
+  margin-top: 26px;
+}
+
+/* The palm-sugar line, 8px clear of each circle. */
+.step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 64px;
+  bottom: -18px;
+  left: 26px;
+  width: 3px;
+  background: var(--palm-sugar);
+}
+
+.stepNumber {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  color: var(--tamarind-brown);
+  font: 600 40px/50px var(--font-heading);
+}
+
+.stepNumber > * {
+  grid-area: 1 / 1;
+}
+
+.stepTitle {
+  margin: 0 0 4px;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.stepText {
+  max-width: 520px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+/* ---------- Turmeric panel: her share ---------- */
+
+.earnings {
+  padding-top: 60px;
+}
+
+.panel {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 640px);
+  align-items: start;
+  gap: 60px;
+  min-height: 340px;
+  padding: 50px 48px;
+  border-radius: 40px;
+  background: var(--turmeric);
+}
+
+.panelPhoto {
+  width: 240px;
+  height: 240px;
+}
+
+.panelTitle {
+  margin: 10px 0 0;
+  font: 700 56px/66px var(--font-heading);
+}
+
+.panelText {
+  margin: 16px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.panelSparkle {
+  position: absolute;
+  top: 60px;
+  right: 78px;
+}
+
+/* ---------- The sign-up form and family questions ---------- */
+
+.signUp {
+  padding-top: 90px;
+  padding-bottom: 120px;
+  scroll-margin-top: 16px;
+}
+
+.formLead {
+  margin: 18px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: minmax(0, 872px) minmax(0, 420px);
+  justify-content: space-between;
+  align-items: start;
+  gap: 48px;
+  margin-top: 36px;
+}
+
+.questions {
+  box-sizing: border-box;
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 28px;
+  border-radius: 32px;
+  background: var(--rice-paper);
+  scroll-margin-top: 16px;
+}
+
+.questionsTitle {
+  margin: 0;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.questionList {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* ---------- Smaller screens ---------- */
+
+@media (max-width: 1200px) {
+  .heroInner,
+  .howInner,
+  .formRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .collage {
+    width: min(100%, 560px);
+  }
+
+  .sparkleSmall,
+  .panelSparkle {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .panelPhoto {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+@media (max-width: 700px) {
+  .title {
+    font-size: 52px;
+    line-height: 56px;
+  }
+
+  .titleScript {
+    margin: -8px 0 0 56px;
+    font-size: 72px;
+    line-height: 96px;
+  }
+
+  .zigzag {
+    margin: 12px 0 0 56px;
+    max-width: calc(100% - 56px);
+  }
+
+  .howTitle,
+  .panelTitle {
+    font-size: 40px;
+    line-height: 48px;
+  }
+}
