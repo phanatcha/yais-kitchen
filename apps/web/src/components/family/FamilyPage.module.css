@@ -1,0 +1,24 @@
+/* Tabs drawn as Outline buttons; the current page is Turmeric. */
+.tab {
+  display: inline-flex;
+  padding: 13px 26px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 999px;
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+  text-decoration: none;
+}
+
+.tab:hover {
+  background: var(--rice-paper);
+}
+
+.tab[aria-current="page"] {
+  border-color: var(--turmeric);
+  background: var(--turmeric);
+}
+
+.tab:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 3px;
+}

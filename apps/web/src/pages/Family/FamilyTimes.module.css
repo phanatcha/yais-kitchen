@@ -1,0 +1,26 @@
+.form {
+  display: grid;
+  gap: 16px;
+  padding: 28px 32px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 16px 24px;
+}
+
+.submit {
+  min-height: 60px;
+}
+
+@media (max-width: 900px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form {
+    padding: 20px;
+  }
+}

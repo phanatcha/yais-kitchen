@@ -1,0 +1,42 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 872px) minmax(0, 420px);
+  grid-template-areas:
+    "steps steps"
+    "main  side";
+  column-gap: 48px;
+  justify-content: space-between;
+}
+
+.steps {
+  grid-area: steps;
+  margin-bottom: 28px;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.lead {
+  margin-top: 14px;
+}
+
+.side {
+  grid-area: side;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "steps" "main" "side";
+  }
+
+  .side {
+    max-width: 520px;
+    margin-top: 48px;
+  }
+}

@@ -1,0 +1,143 @@
+/* Figma: 10 Booking Confirmed (node 9:32). */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 872px) minmax(0, 420px);
+  grid-template-areas:
+    "steps steps"
+    "main  side";
+  column-gap: 48px;
+  justify-content: space-between;
+}
+
+.steps {
+  grid-area: steps;
+  margin-bottom: 28px;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.side {
+  grid-area: side;
+}
+
+/* "SEE YOU IN / the kitchen" with zigzag and sparkles */
+.hero {
+  position: relative;
+  max-width: 760px;
+  padding-top: 14px;
+}
+
+.heroTitle {
+  display: grid;
+  margin: 0;
+}
+
+.heroMain {
+  font: 700 96px/100px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.heroScript {
+  margin: 10px 0 0 78px;
+  font: 700 116px/155px var(--font-script);
+  color: var(--chili-coral);
+}
+
+.zigzag {
+  display: block;
+  margin: 9px 0 0 78px;
+  max-width: calc(100% - 78px);
+  height: auto;
+}
+
+.sparkleBig {
+  position: absolute;
+  top: 20px;
+  left: 568px;
+}
+
+.sparkleSmall {
+  position: absolute;
+  top: 124px;
+  left: 688px;
+}
+
+.status {
+  margin-top: 14px;
+}
+
+.timeline {
+  display: grid;
+  grid-template-columns: 158px minmax(0, 1fr);
+  gap: 16px 0;
+  margin: 24px 0 0;
+}
+
+.timeline dt {
+  font: 500 20px/28px var(--font-heading);
+}
+
+.timeline dd {
+  margin: 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "steps" "main" "side";
+  }
+
+  .side {
+    max-width: 520px;
+    margin-top: 48px;
+  }
+}
+
+@media (max-width: 800px) {
+  .heroMain {
+    font-size: 56px;
+    line-height: 64px;
+  }
+
+  .heroScript {
+    margin-left: 32px;
+    font-size: 68px;
+    line-height: 96px;
+  }
+
+  .zigzag {
+    margin-left: 32px;
+  }
+
+  .sparkleBig {
+    top: 0;
+    left: auto;
+    right: 0;
+    width: 48px;
+    height: 48px;
+  }
+
+  .sparkleSmall {
+    display: none;
+  }
+
+  .timeline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .timeline dd {
+    margin-bottom: 8px;
+  }
+}

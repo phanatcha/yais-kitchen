@@ -1,0 +1,20 @@
+.headingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.toggle {
+  display: flex;
+  gap: 12px;
+}
+
+/* The chosen grouping is Turmeric, like a selected choice. */
+.toggle button[aria-pressed="true"],
+.toggle button[aria-pressed="true"]:hover {
+  border-color: var(--turmeric);
+  background: var(--turmeric);
+  color: var(--tamarind-brown);
+}

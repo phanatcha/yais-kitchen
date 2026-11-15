@@ -18,6 +18,7 @@
     "up": "docker compose -f infra/docker-compose.yml up -d --build --wait",
     "down": "docker compose -f infra/docker-compose.yml down",
     "mock": "npm run mock -w @yais-kitchen/api-spec",
+    "web": "npm run dev -w @yais-kitchen/web",
     "gateway": "npm run dev -w @yais-kitchen/gateway",
     "auth": "npm run dev -w @yais-kitchen/auth",
     "catalog": "npm run dev -w @yais-kitchen/catalog",
