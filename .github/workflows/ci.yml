@@ -40,6 +40,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm run build -w @yais-kitchen/web
 
   # Starts everything with docker compose, the way a new teammate does, and
   # checks it through the gateway.
