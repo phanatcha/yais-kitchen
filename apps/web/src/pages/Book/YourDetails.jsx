@@ -26,6 +26,22 @@ const LANGUAGES = [
 
 const EXPERIENCE = ["A little", "New to cooking", "I cook a lot"];
 
+// What POST /booking/bookings takes for the choices above.
+const LANGUAGE_CODES = {
+  English: "en",
+  "Chinese (中文)": "zh",
+  "Japanese (日本語)": "ja",
+  "Korean (한국어)": "ko",
+  "French (Français)": "fr",
+  "German (Deutsch)": "de",
+  "Spanish (Español)": "es",
+};
+const EXPERIENCE_CODES = {
+  "A little": "some",
+  "New to cooking": "new",
+  "I cook a lot": "lots",
+};
+
 export default function YourDetails() {
   const navigate = useNavigate();
   const [checkout] = useState(readCheckout);
@@ -77,9 +93,11 @@ export default function YourDetails() {
       }
       const booking = await createBooking.mutateAsync({
         holdId: checkout.hold.id,
+        language: LANGUAGE_CODES[details.language],
+        allergies: details.allergies || undefined,
+        cookingExperience: EXPERIENCE_CODES[details.experience],
       });
-      // Language, allergies and experience have no API field yet, so they
-      // stay in this tab for the helper brief.
+      // Kept in this tab so Back from Payment fills the form in again.
       saveCheckout({ details, booking });
       navigate("/book/payment");
     } catch (err) {

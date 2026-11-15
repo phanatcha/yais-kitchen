@@ -63,13 +63,16 @@ export function useStartGuestSession() {
   });
 }
 
-/** POST /booking/bookings: turns the hold into a booking waiting for payment. */
+/**
+ * POST /booking/bookings: turns the hold into a booking waiting for payment.
+ * language, allergies and cookingExperience brief the helper.
+ */
 export function useCreateBooking() {
   return useMutation({
-    mutationFn: ({ holdId }) =>
+    mutationFn: ({ holdId, language, allergies, cookingExperience }) =>
       api("/booking/bookings", {
         method: "POST",
-        body: { holdId },
+        body: { holdId, language, allergies, cookingExperience },
         headers: { "Idempotency-Key": newIdempotencyKey() },
       }),
   });
