@@ -145,7 +145,7 @@ export default function PickATime() {
   function handleBack() {
     // Go back to the class page if the visitor came from it.
     if (location.key !== "default") navigate(-1);
-    else navigate("/");
+    else navigate(`/classes/${classId}`);
   }
 
   const holdError = createHold.error;

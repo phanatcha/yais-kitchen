@@ -1,0 +1,429 @@
+/* ---------- Hero: title and class finder left, photo collage right ---------- */
+
+.hero {
+  padding-top: 20px;
+  padding-bottom: 50px;
+}
+
+.heroInner {
+  display: grid;
+  grid-template-columns: minmax(0, 660px) minmax(0, 660px);
+  justify-content: space-between;
+  align-items: start;
+  gap: 48px;
+}
+
+.heroText {
+  position: relative;
+  padding-top: 8px;
+}
+
+.sparkleBig {
+  position: absolute;
+  top: -4px;
+  left: 612px;
+}
+
+.sparkleSmall {
+  position: absolute;
+  top: 104px;
+  left: 568px;
+}
+
+/* Kanit Bold 96/100, then Charmonman 128/170 indented under it. */
+.heroTitle {
+  margin: 0;
+  font: 700 96px/100px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.heroLine {
+  display: block;
+}
+
+/* The two Kanit lines are 96px apart in the design, not 100. */
+.heroLine + .heroLine {
+  margin-top: -4px;
+}
+
+.heroScript {
+  display: block;
+  margin: -28px 0 0 128px;
+  color: var(--chili-coral);
+  font: 700 128px/170px var(--font-script);
+  text-transform: none;
+}
+
+.heroZigzag {
+  display: block;
+  margin: 6px 0 0 128px;
+  max-width: calc(100% - 128px);
+  height: auto;
+}
+
+.heroLead {
+  max-width: 540px;
+  margin: 20px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+/* Figma "Class finder": a 92px pill with two fields and the button. */
+.finder {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 660px;
+  max-width: 100%;
+  min-height: 92px;
+  margin-top: 30px;
+  padding: 14px 14px 14px 32px;
+  border: 2px solid var(--tamarind-brown);
+  border-radius: 46px;
+  background: var(--coconut-cream);
+}
+
+.finderField {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.finderField:first-child {
+  flex: 0 1 140px;
+}
+
+.finderLabel {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.finderInput {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+}
+
+.finderInput::placeholder {
+  color: var(--tamarind-brown);
+  opacity: 1;
+}
+
+.finderInput:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.finderValue {
+  font: 500 18px/24px var(--font-heading);
+}
+
+.finderDivider {
+  align-self: stretch;
+  width: 2px;
+  margin: 4px 0;
+  background: var(--palm-sugar);
+}
+
+.finderButton {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/*
+ * The collage is drawn on a 660 × 654 grid and scales with its width:
+ * 1cqw is 6.6px at full size.
+ */
+.collage {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 660 / 654;
+}
+
+.collage > * {
+  position: absolute;
+}
+
+.photo {
+  border-radius: 32px;
+}
+
+.photoHome {
+  top: 0;
+  left: 0;
+  width: 60cqw;
+  height: 45.45cqw;
+}
+
+.photoTemple {
+  top: 0;
+  left: 63.03cqw;
+  width: 36.97cqw;
+  height: 33.33cqw;
+}
+
+.photoMarket {
+  top: 48.48cqw;
+  left: 0;
+  width: 35.76cqw;
+  height: 50cqw;
+}
+
+.ring {
+  top: 35.45cqw;
+  left: 39.39cqw;
+  width: 63.64cqw;
+  height: auto;
+}
+
+.plate {
+  top: 43.03cqw;
+  left: 46.97cqw;
+  width: 48.48cqw;
+  height: auto;
+}
+
+.dish {
+  top: 46.36cqw;
+  left: 50.3cqw;
+  width: 41.82cqw;
+  height: 41.82cqw;
+}
+
+.sparkleEdge {
+  top: 36.36cqw;
+  left: 102.42cqw;
+  width: 5.45cqw;
+  height: auto;
+}
+
+/* ---------- Brown band: why live, and the three steps ---------- */
+
+.why {
+  padding: 8px 0 54px;
+  background: var(--tamarind-brown);
+  color: var(--coconut-cream);
+}
+
+.whyInner {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 620px);
+  justify-content: space-between;
+  gap: 48px;
+  padding-top: 48px;
+}
+
+.whyTitle {
+  margin: 0;
+  font: 700 60px/70px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.whyScript {
+  margin: 2px 0 0;
+  color: var(--turmeric);
+  font: 700 64px/84px var(--font-script);
+}
+
+.whyLead {
+  margin: 16px 0 48px;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.steps {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 28px;
+}
+
+.step + .step {
+  margin-top: 70px;
+}
+
+/* The palm-sugar line between two step circles. */
+.step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 82px;
+  bottom: -60px;
+  left: 35px;
+  width: 3px;
+  background: var(--palm-sugar);
+}
+
+.stepNumber {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  color: var(--tamarind-brown);
+  font: 600 40px/50px var(--font-heading);
+}
+
+.stepNumber > * {
+  grid-area: 1 / 1;
+}
+
+.stepTitle {
+  margin: 2px 0 4px;
+  font: 500 24px/32px var(--font-heading);
+}
+
+.stepText {
+  max-width: 500px;
+  margin: 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+/* ---------- Meet the Yais, What you will cook ---------- */
+
+.yais {
+  padding-top: 58px;
+}
+
+.yaiNote {
+  margin-bottom: 8px;
+}
+
+.classes {
+  padding-top: 78px;
+}
+
+/* ---------- Turmeric panel: the Yai's share ---------- */
+
+.support {
+  padding-top: 52px;
+  padding-bottom: 50px;
+}
+
+.panel {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: start;
+  gap: 60px;
+  min-height: 400px;
+  padding: 48px;
+  border-radius: 40px;
+  background: var(--turmeric);
+}
+
+.panelPhoto {
+  width: 300px;
+  height: 300px;
+  margin-top: 2px;
+}
+
+.panelTitle {
+  margin: 0;
+  font: 700 60px/70px var(--font-heading);
+}
+
+.panelLead {
+  max-width: 620px;
+  margin: 20px 0 22px;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.panelSparkle {
+  position: absolute;
+  top: 60px;
+  right: 78px;
+}
+
+/* ---------- Smaller screens ---------- */
+
+@media (max-width: 1200px) {
+  .heroInner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .collage {
+    width: min(100%, 660px);
+  }
+
+  .sparkleEdge {
+    display: none;
+  }
+
+  .whyInner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panelSparkle {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .panelPhoto {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+@media (max-width: 700px) {
+  .heroTitle {
+    font-size: 52px;
+    line-height: 56px;
+  }
+
+  .heroScript {
+    margin: -12px 0 0 56px;
+    font-size: 72px;
+    line-height: 96px;
+  }
+
+  .heroZigzag {
+    margin-left: 56px;
+    max-width: calc(100% - 56px);
+  }
+
+  .sparkleBig,
+  .sparkleSmall {
+    display: none;
+  }
+
+  .finder {
+    flex-wrap: wrap;
+    border-radius: 32px;
+    padding: 16px 20px;
+  }
+
+  .finderDivider {
+    display: none;
+  }
+
+  .finderButton {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .whyTitle,
+  .panelTitle {
+    font-size: 40px;
+    line-height: 48px;
+  }
+}

@@ -1,0 +1,98 @@
+.page {
+  padding-bottom: 84px;
+}
+
+/* At (816, 104) in the frame, beside the script word. */
+.sparkle {
+  top: -28px;
+  left: 744px;
+}
+
+/* Six dish circles, 180px apart. */
+.dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+  margin-top: 40px;
+}
+
+.dish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 132px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tamarind-brown);
+  font: 500 18px/24px var(--font-heading);
+  cursor: pointer;
+}
+
+.circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  transition: transform 200ms ease-out;
+}
+
+.circle > * {
+  grid-area: 1 / 1;
+}
+
+.dish:hover .circle {
+  transform: translateY(-3px);
+}
+
+.dish[aria-pressed="true"] {
+  font-weight: 700;
+}
+
+.dish:focus-visible {
+  outline: 3px solid var(--tamarind-brown);
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+.list {
+  margin-top: 38px;
+}
+
+@media (max-width: 600px) {
+  .dishes {
+    gap: 20px 16px;
+  }
+
+  .dish {
+    width: 96px;
+    font-size: 16px;
+  }
+
+  .circle {
+    width: 96px;
+    height: 96px;
+  }
+
+  .circle img {
+    width: 96px;
+    height: 96px;
+  }
+
+  .circle .slot {
+    width: 78px;
+    height: 78px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle {
+    transition: none;
+  }
+
+  .dish:hover .circle {
+    transform: none;
+  }
+}

@@ -1,0 +1,234 @@
+.page {
+  padding-bottom: 140px;
+}
+
+/* ---------- Thai-tea banner with the cream tab ---------- */
+
+.banner {
+  position: relative;
+  height: 360px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 36px;
+  background: var(--thai-tea);
+}
+
+.photoLabel {
+  position: absolute;
+  top: 26px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sample {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+
+.tab {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: min(760px, 100%);
+  min-height: 190px;
+  padding: 26px 32px 24px;
+  border-top-right-radius: 48px;
+  background: var(--coconut-cream);
+}
+
+.dish {
+  margin: 0;
+  font: 700 60px/70px var(--font-heading);
+}
+
+.subtitle {
+  max-width: 640px;
+  margin: 10px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.sparkle {
+  position: absolute;
+  right: 46px;
+  bottom: 48px;
+}
+
+/* ---------- Details left, booking card right ---------- */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 780px) minmax(0, 500px);
+  justify-content: space-between;
+  align-items: start;
+  gap: 48px;
+  margin-top: 48px;
+}
+
+.details {
+  min-width: 0;
+}
+
+.heading {
+  margin: 32px 0 10px;
+  font: 600 40px/50px var(--font-heading);
+}
+
+.heading:first-child {
+  margin-top: 0;
+}
+
+.text {
+  max-width: 740px;
+  margin: 0;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.how {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.how li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.how img {
+  margin-top: 6px;
+}
+
+/* Pandan "Your Yai" panel. */
+.yai {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  margin-top: 48px;
+  padding: 25px 32px 25px 28px;
+  border-radius: 32px;
+  background: var(--pandan);
+}
+
+.yaiPhoto {
+  width: 140px;
+  height: 140px;
+  padding: 12px;
+}
+
+.yaiText {
+  align-self: start;
+  margin-top: -5px;
+}
+
+.yaiScript {
+  margin: 0;
+  font: 700 40px/54px var(--font-script);
+}
+
+.yaiName {
+  margin: 2px 0 2px;
+  font: 500 24px/32px var(--font-heading);
+}
+
+/* Rice-paper booking card; it stays in view while the details scroll. */
+.card {
+  position: sticky;
+  top: 24px;
+  box-sizing: border-box;
+  padding: 28px 36px 20px;
+  border-radius: 36px;
+  background: var(--rice-paper);
+}
+
+.price {
+  margin: 0 0 4px;
+  color: var(--chili-coral);
+  font: 700 60px/70px var(--font-heading);
+}
+
+.tags {
+  margin-top: 22px;
+}
+
+.facts {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0 28px;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.facts dd {
+  margin: 0;
+  text-align: right;
+}
+
+.next {
+  margin-top: 12px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .banner {
+    height: 320px;
+  }
+
+  .dish {
+    font-size: 44px;
+    line-height: 52px;
+  }
+
+  .heading {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .sparkle {
+    display: none;
+  }
+
+  .yai {
+    grid-template-columns: 96px minmax(0, 1fr);
+    padding: 20px;
+  }
+
+  .yaiPhoto {
+    width: 96px;
+    height: 96px;
+  }
+
+  .yai > a {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

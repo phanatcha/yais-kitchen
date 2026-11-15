@@ -1,0 +1,180 @@
+/* ---------- Portrait left, her story right ---------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: 540px minmax(0, 1fr);
+  gap: 88px;
+  padding-top: 20px;
+}
+
+/* Ring 540, cream edge 452 and photo 412, centred on each other. */
+.portrait {
+  position: relative;
+  width: 540px;
+  aspect-ratio: 1;
+}
+
+.portrait > * {
+  position: absolute;
+}
+
+.portrait > img:first-child {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.edge {
+  inset: 8.15%;
+  width: 83.7%;
+  height: 83.7%;
+}
+
+.photo {
+  inset: 11.85%;
+}
+
+.about {
+  position: relative;
+  padding-top: 72px;
+}
+
+.sparkle {
+  position: absolute;
+  top: 14px;
+  left: -90px;
+}
+
+.name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 32px;
+  margin: 0;
+}
+
+.nameMain {
+  font: 700 96px/110px var(--font-heading);
+  text-transform: uppercase;
+}
+
+.nameThai {
+  color: var(--chili-coral);
+  font: 700 64px/84px var(--font-script);
+}
+
+.story {
+  max-width: 640px;
+  margin: 16px 0 0;
+  font-size: 20px;
+  line-height: 32px;
+  white-space: pre-line;
+}
+
+.helper {
+  margin-top: 36px;
+}
+
+.price {
+  margin: 50px 0 0;
+  color: var(--chili-coral);
+  font: 500 24px/32px var(--font-heading);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+/* ---------- Her family recipes ---------- */
+
+.recipes {
+  padding-top: 54px;
+  padding-bottom: 60px;
+  scroll-margin-top: 16px;
+}
+
+/* ---------- Brown band: In her kitchen ---------- */
+
+.kitchen {
+  padding-top: 34px;
+  padding-bottom: 60px;
+  background: var(--tamarind-brown);
+}
+
+.kitchenInner {
+  position: relative;
+}
+
+.kitchenTitle {
+  margin: 0 0 22px;
+  color: var(--turmeric);
+  font: 700 64px/84px var(--font-script);
+}
+
+.kitchenSparkle {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+
+.kitchenPhotos {
+  display: grid;
+  grid-template-columns: 560fr 330fr 430fr;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kitchenPhoto {
+  height: 330px;
+  border-radius: 32px;
+}
+
+@media (max-width: 1200px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .portrait {
+    width: min(100%, 420px);
+  }
+
+  .about {
+    padding-top: 0;
+  }
+
+  .sparkle {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .kitchenPhotos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kitchenPhoto {
+    height: 240px;
+  }
+
+  .kitchenSparkle {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .nameMain {
+    font-size: 52px;
+    line-height: 60px;
+  }
+
+  .nameThai {
+    font-size: 44px;
+    line-height: 60px;
+  }
+}

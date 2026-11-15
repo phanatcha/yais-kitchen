@@ -1,0 +1,9 @@
+.page {
+  padding-bottom: 88px;
+}
+
+/* At (790, 116) in the frame, beside the script word. */
+.sparkle {
+  top: -16px;
+  left: 718px;
+}
