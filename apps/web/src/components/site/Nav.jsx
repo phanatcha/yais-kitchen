@@ -1,11 +1,19 @@
 import { Link, NavLink } from "react-router";
 import logo from "../../assets/logo.svg";
+import { ACCOUNT_LINKS, useMe } from "../../lib/auth.js";
 import ui from "../../styles/ui.module.css";
 import { EXPLORE_LINKS } from "./links.js";
 import styles from "./Nav.module.css";
 
-/** Figma "Nav": the logo, the Explore links and Sign in. */
+/** Figma "Nav": the logo, the Explore links, and Sign in or your account. */
 export default function Nav() {
+  // Signed out (401) or a guest checkout leaves this on Sign in.
+  const me = useMe();
+  const [accountTo, accountLabel] = ACCOUNT_LINKS[me.data?.role] ?? [
+    "/sign-in",
+    "Sign in",
+  ];
+
   return (
     <header className={styles.bar}>
       <nav className={styles.nav} aria-label="Main">
@@ -25,8 +33,8 @@ export default function Nav() {
             </li>
           ))}
         </ul>
-        <Link to="/sign-in" className={`${ui.outline} ${styles.signIn}`}>
-          Sign in
+        <Link to={accountTo} className={`${ui.outline} ${styles.signIn}`}>
+          {accountLabel}
         </Link>
       </nav>
     </header>
