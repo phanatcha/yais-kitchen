@@ -300,6 +300,17 @@ describe("connectEvents", () => {
     );
   });
 
+  it("takes event types with more than two parts, as asyncapi.yaml has", async () => {
+    const { events } = await connect();
+    await events.consume({
+      "payment.refund.failed": vi.fn(),
+      "live_class.state.changed": vi.fn(),
+    });
+    for (const bad of ["booking", "booking.", ".booking", "booking..done"]) {
+      await expect(events.publish(bad, {})).rejects.toThrow(TypeError);
+    }
+  });
+
   it("answers 503 when the broker can't take the event", async () => {
     const { broker, events } = await connect();
     broker.channel.failSends = true;

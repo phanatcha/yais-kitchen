@@ -2,7 +2,6 @@ import { useNavigate, useParams } from "react-router";
 import LiveRoom from "../../components/live/LiveRoom.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import { useBooking, useRecipe } from "../../lib/booking.js";
-import { useJoinTicket } from "../../lib/live.js";
 import ui from "../../styles/ui.module.css";
 
 /** Figma 12 Live Class, for the tourist. */
@@ -12,7 +11,6 @@ export default function LiveClass() {
   const bookingQuery = useBooking(bookingId);
   const booking = bookingQuery.data;
   const recipeQuery = useRecipe(booking?.class.id);
-  const joinQuery = useJoinTicket(booking?.classTimeId);
 
   if (bookingQuery.isPending) {
     return (
@@ -39,7 +37,6 @@ export default function LiveClass() {
       startsAt={booking.startsAt}
       durationMinutes={booking.class.durationMinutes}
       recipe={recipeQuery.data}
-      joinError={joinQuery.error}
       afterHref={afterHref}
       onLeave={() => navigate(afterHref)}
     />

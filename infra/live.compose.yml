@@ -1,0 +1,77 @@
+# The live class demo: video calls between laptops on one network, with no
+# cloud service. Use it with docker-compose.yml through `npm run demo`, which
+# sets LIVEKIT_NODE_IP to this laptop's address on the network.
+#
+# - livekit: LiveKit's open-source media server in development mode (API key
+#   `devkey`, secret `secret`). Browsers send it audio and video on 7881/tcp
+#   and 7882/udp at LIVEKIT_NODE_IP. Signalling goes through the web app's
+#   HTTPS address instead (see apps/web/vite.config.js), so 7880 stays local.
+# - booking and live-class run for real. Payment stays on the mock server,
+#   so demo bookings are paid by `npm run demo:class`, not Stripe.
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    restart: unless-stopped
+    command:
+      - --dev
+      - --bind
+      - 0.0.0.0
+      - --node-ip
+      - ${LIVEKIT_NODE_IP:-127.0.0.1}
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+  booking:
+    env_file: ../.env
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: booking }
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      CATALOG_URL: http://catalog:3002
+    depends_on:
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      catalog: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3003/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  live-class:
+    env_file: ../.env
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: live-class }
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      CATALOG_URL: http://catalog:3002
+      BOOKING_URL: http://booking:3003
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+    depends_on:
+      booking: { condition: service_healthy }
+      livekit: { condition: service_started }
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3005/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    environment:
+      BOOKING_URL: http://booking:3003
+      LIVE_CLASS_URL: http://live-class:3005
+    depends_on:
+      booking: { condition: service_healthy }
+      live-class: { condition: service_healthy }

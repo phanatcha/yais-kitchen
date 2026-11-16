@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router";
 import iconCaptions from "../../assets/icon-captions.svg";
 import iconCheck from "../../assets/icon-check.svg";
@@ -10,6 +10,13 @@ import imageMark from "../../assets/image-mark.svg";
 import liveDot from "../../assets/live-dot.svg";
 import { errorText } from "../../lib/errors.js";
 import { useEndClass, useLiveState, useSetStep } from "../../lib/live.js";
+import {
+  CAMERA,
+  MICROPHONE,
+  roleOf,
+  trackOf,
+  useLiveCall,
+} from "../../lib/liveCall.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./LiveRoom.module.css";
 
@@ -28,9 +35,38 @@ function elapsedText(minutes, durationMinutes) {
   return `Starts in ${left} min`;
 }
 
+// Who takes the big picture: the Yai's kitchen first, then the helper.
+const STAGE_ORDER = ["family", "helper", "admin", "tourist"];
+const byStageOrder = (a, b) =>
+  STAGE_ORDER.indexOf(roleOf(a)) - STAGE_ORDER.indexOf(roleOf(b));
+
+/** What the call calls someone. Guests show their first name. */
+function nameOf(participant, yaiName) {
+  const name = participant.name;
+  switch (roleOf(participant)) {
+    case "family":
+      return `${yaiName}'s kitchen`;
+    case "helper":
+      return name ? `${name}, helper` : "Your helper";
+    case "admin":
+      return name ? `${name}, Yai's Kitchen` : "Yai's Kitchen";
+    default:
+      return name || "Guest";
+  }
+}
+
+const SELF_NAMES = {
+  helper: "You (helper)",
+  family: "You (the kitchen)",
+  tourist: "You",
+};
+
 /**
- * Figma 12 Live Class. The video is a placeholder until LiveKit is wired in;
- * the recipe steps come from the API. Helpers also get step and end controls.
+ * Figma 12 Live Class. The video call runs on LiveKit (see liveCall.js): the
+ * Yai's kitchen fills the big picture, you are top right, and everyone else
+ * is along the bottom. The recipe steps come from the API. Helpers also get
+ * step and end controls.
+ * @param {{ role?: "tourist" | "helper" | "family" }} props
  */
 export default function LiveRoom({
   classTimeId,
@@ -39,15 +75,13 @@ export default function LiveRoom({
   startsAt,
   durationMinutes,
   recipe,
-  isHelper = false,
+  role = "tourist",
   onLeave,
   afterHref,
-  joinError,
 }) {
+  const isHelper = role === "helper";
   const stateQuery = useLiveState(classTimeId, { poll: !isHelper });
   const [now, setNow] = useState(() => Date.now());
-  const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(true);
 
   useEffect(() => {
@@ -60,6 +94,30 @@ export default function LiveRoom({
   const stepIndex = state?.step.index ?? 0;
   const stepTotal = state?.step.total ?? recipe?.steps.length ?? 0;
   const minutesIn = Math.floor((now - new Date(startsAt).getTime()) / 60000);
+
+  const call = useLiveCall(classTimeId, { enabled: !ended });
+  const room = call.room;
+  const remotes = room
+    ? [...room.remoteParticipants.values()].sort(byStageOrder)
+    : [];
+  const [stage, ...others] = remotes;
+  const stageVideo = stage && trackOf(stage, CAMERA);
+  const selfVideo = room && trackOf(room.localParticipant, CAMERA);
+  const micOn = room?.localParticipant.isMicrophoneEnabled ?? false;
+  const cameraOn = room?.localParticipant.isCameraEnabled ?? false;
+
+  let stageNote;
+  if (!room) {
+    stageNote =
+      call.status === "failed" ? "Not connected" : "Joining the call…";
+  } else if (!stage) {
+    stageNote =
+      role === "family"
+        ? "Waiting for the helper and guests to join"
+        : `Waiting for ${yaiName}'s kitchen to join`;
+  } else if (!stageVideo) {
+    stageNote = `${nameOf(stage, yaiName)} has the camera off`;
+  }
 
   let tag = (
     <span className={styles.liveTag}>
@@ -96,30 +154,67 @@ export default function LiveRoom({
         )}
       </header>
 
-      {joinError && (
-        <p className={styles.banner} role="alert">
-          {errorText(joinError)}
-        </p>
-      )}
+      <CallNotices call={call} ended={ended} />
 
       <div className={styles.grid}>
         <div className={styles.stage}>
           <div className={styles.video}>
+            {stageVideo && (
+              <VideoView track={stageVideo} className={styles.stageMedia} />
+            )}
             <span className={`${ui.tag} ${styles.teacherTag}`}>
-              {yaiName}, teaching in Thai
+              {stage && roleOf(stage) !== "family"
+                ? nameOf(stage, yaiName)
+                : `${yaiName}, teaching in Thai`}
             </span>
             <div className={`${styles.tile} ${styles.selfTile}`}>
-              <img src={imageMark} alt="" width="32" height="26" />
-              <span>{videoOff ? "Your video is off" : "Your camera"}</span>
+              {selfVideo ? (
+                <VideoView track={selfVideo} mirror className={styles.media} />
+              ) : (
+                <img src={imageMark} alt="" width="32" height="26" />
+              )}
+              <span className={styles.tileName}>
+                {selfVideo ? (SELF_NAMES[role] ?? "You") : "Your video is off"}
+              </span>
             </div>
-            <div className={`${styles.tile} ${styles.helperTile}`}>
-              <img src={imageMark} alt="" width="32" height="26" />
-              <span>{isHelper ? "You (helper)" : "Your helper"}</span>
-            </div>
-            <p className={styles.videoLabel}>
-              <img src={imageMark} alt="" width="32" height="26" />
-              Live video from {yaiName}&apos;s kitchen
-            </p>
+            {others.length > 0 && (
+              <ul className={styles.others} aria-label="Also in the class">
+                {others.map((participant) => {
+                  const video = trackOf(participant, CAMERA);
+                  return (
+                    <li
+                      key={participant.identity}
+                      className={
+                        participant.isSpeaking
+                          ? `${styles.tile} ${styles.otherTile} ${styles.speaking}`
+                          : `${styles.tile} ${styles.otherTile}`
+                      }
+                    >
+                      {video ? (
+                        <VideoView track={video} className={styles.media} />
+                      ) : (
+                        <img src={imageMark} alt="" width="32" height="26" />
+                      )}
+                      <span className={styles.tileName}>
+                        {nameOf(participant, yaiName)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {stageNote && (
+              <p className={styles.videoLabel}>
+                <img src={imageMark} alt="" width="32" height="26" />
+                {stageNote}
+              </p>
+            )}
+            {remotes.map((participant) => (
+              <AudioView
+                key={participant.identity}
+                track={trackOf(participant, MICROPHONE)}
+              />
+            ))}
           </div>
 
           {captionsOn && (
@@ -143,15 +238,17 @@ export default function LiveRoom({
           <div className={styles.controls} role="group" aria-label="Call">
             <ControlButton
               icon={iconMic}
-              pressed={muted}
-              onClick={() => setMuted((m) => !m)}
+              pressed={Boolean(room) && !micOn}
+              onClick={() => call.setMicrophone(!micOn)}
               label="Mute"
+              disabled={!room}
             />
             <ControlButton
               icon={iconVideo}
-              pressed={videoOff}
-              onClick={() => setVideoOff((v) => !v)}
+              pressed={Boolean(room) && !cameraOn}
+              onClick={() => call.setCamera(!cameraOn)}
               label="Stop video"
+              disabled={!room}
             />
             <ControlButton
               icon={iconCaptions}
@@ -198,20 +295,120 @@ export default function LiveRoom({
             </ol>
           )}
 
-          {isHelper ? (
+          {isHelper && (
             <HelperControls
               classTimeId={classTimeId}
               stepIndex={stepIndex}
               stepTotal={stepTotal}
               ended={ended}
             />
-          ) : (
-            <AskYai />
           )}
+          {role === "family" && (
+            <p className={ui.body}>
+              Point the camera at the stove, so everyone can see Yai cook. The
+              helper moves the recipe along.
+            </p>
+          )}
+          {role === "tourist" && <AskYai />}
         </aside>
       </div>
     </div>
   );
+}
+
+/**
+ * What is wrong with the call, if anything, and how to put it right. A
+ * camera the browser won't give still leaves the person watching.
+ */
+function CallNotices({ call, ended }) {
+  return (
+    <>
+      {call.error && (
+        <p className={styles.banner} role="alert">
+          {errorText(call.error)}{" "}
+          <button
+            type="button"
+            className={styles.bannerButton}
+            onClick={call.retry}
+          >
+            Try again
+          </button>
+        </p>
+      )}
+      {call.status === "reconnecting" && (
+        <p className={styles.banner} role="status">
+          The connection dropped. Reconnecting…
+        </p>
+      )}
+      {call.status === "disconnected" && !ended && (
+        <p className={styles.banner} role="status">
+          You&apos;re out of the call.{" "}
+          <button
+            type="button"
+            className={styles.bannerButton}
+            onClick={call.retry}
+          >
+            Join again
+          </button>
+        </p>
+      )}
+      {call.deviceError && (
+        <p className={styles.banner} role="alert">
+          We couldn&apos;t use your camera or microphone, so the others
+          can&apos;t see or hear you. Allow them for this site in your browser,
+          then turn them on below.
+        </p>
+      )}
+      {call.room && !call.canPlayAudio && (
+        <p className={styles.banner} role="status">
+          Your browser paused the sound.{" "}
+          <button
+            type="button"
+            className={styles.bannerButton}
+            onClick={call.startAudio}
+          >
+            Turn on sound
+          </button>
+        </p>
+      )}
+    </>
+  );
+}
+
+/** One camera, shown in a <video>. LiveKit attaches and detaches the track. */
+function VideoView({ track, mirror = false, className }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!track || !element) return undefined;
+    track.attach(element);
+    return () => {
+      track.detach(element);
+    };
+  }, [track]);
+  return (
+    <video
+      ref={ref}
+      className={mirror ? `${className} ${styles.mirror}` : className}
+      autoPlay
+      playsInline
+      muted
+    />
+  );
+}
+
+/** One person's microphone. Nothing shows; it only plays. */
+function AudioView({ track }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!track || !element) return undefined;
+    track.attach(element);
+    return () => {
+      track.detach(element);
+    };
+  }, [track]);
+  return <audio ref={ref} autoPlay />;
 }
 
 /**
@@ -224,6 +421,7 @@ function ControlButton({
   label,
   onClick,
   pressed,
+  disabled = false,
   danger = false,
   quiet = false,
 }) {
@@ -233,6 +431,7 @@ function ControlButton({
       className={quiet ? `${styles.control} ${styles.quiet}` : styles.control}
       onClick={onClick}
       aria-pressed={pressed}
+      disabled={disabled}
     >
       <span
         className={

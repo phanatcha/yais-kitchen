@@ -12,7 +12,8 @@ export const EXCHANGE = "yais.events";
 export const DEAD_LETTER_QUEUE = "yais.events.dead";
 export const MAX_ATTEMPTS = 5;
 
-const EVENT_TYPE = /^[a-z][a-z_]*\.[a-z][a-z_]*$/;
+// Such as `booking.confirmed` or `payment.refund.failed`: two or more parts.
+const EVENT_TYPE = /^[a-z][a-z_]*(\.[a-z][a-z_]*)+$/;
 const MAX_RETRY_DELAY_MS = 60_000;
 
 // Failed events wait here, then RabbitMQ sends them back to the main queue.

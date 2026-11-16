@@ -339,4 +339,26 @@ describe("live access, persisted state and recording consent", () => {
     const state = await api.state(ids.time, helper);
     expect(state.recording.everyoneAgreed).toBe(false);
   });
+  it("waits for a change in progress instead of failing", async () => {
+    await connected();
+    await h.store.Session.collection.updateOne(
+      { _id: ids.time },
+      {
+        $set: {
+          lease: "someone-else",
+          leaseUntil: new Date(h.clock.time + 60000),
+        },
+      },
+    );
+    setTimeout(
+      () =>
+        h.store.Session.collection.updateOne(
+          { _id: ids.time },
+          { $unset: { lease: "", leaseUntil: "" } },
+        ),
+      200,
+    );
+    const state = await api.state(ids.time, helper);
+    expect(state.classTimeId).toBe(ids.time);
+  });
 });

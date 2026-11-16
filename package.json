@@ -29,7 +29,10 @@
     "live-class": "npm run dev -w @yais-kitchen/live-class",
     "test:max": "vitest run services/booking/tests services/payment/tests services/live-class/tests",
     "validate:api": "npm run lint -w @yais-kitchen/api-spec",
-    "up:max": "docker compose -f infra/docker-compose.yml -f infra/max.compose.yml up -d --build --wait"
+    "up:max": "docker compose -f infra/docker-compose.yml -f infra/max.compose.yml up -d --build --wait",
+    "demo": "node --env-file-if-exists=.env infra/demo.js",
+    "demo:class": "node --env-file-if-exists=.env infra/demo-class.js",
+    "demo:down": "docker compose -f infra/docker-compose.yml -f infra/live.compose.yml down"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -5,8 +5,9 @@ export const liveStateKey = (classTimeId) => ["live", "state", classTimeId];
 
 /**
  * GET /live/class-times/{classTimeId}/state: current recipe step and recording.
- * In the real call, changes arrive as LiveKit data messages. Until LiveKit is
- * wired in, tourists poll every 5 seconds instead.
+ * In the call, changes also arrive as LiveKit data messages (see liveCall.js),
+ * which refetch this at once. Tourists poll every 5 seconds as well, in case a
+ * message is missed.
  */
 export function useLiveState(classTimeId, { poll = true } = {}) {
   return useQuery({
@@ -19,18 +20,24 @@ export function useLiveState(classTimeId, { poll = true } = {}) {
 }
 
 /**
- * POST /live/class-times/{classTimeId}/join: the LiveKit ticket. Not used yet
- * (the video is a placeholder), but it checks that this person may join.
+ * POST /live/class-times/{classTimeId}/join: a LiveKit ticket that works for
+ * 2 minutes, so it is asked for right before connecting.
  */
-export function useJoinTicket(classTimeId) {
-  return useQuery({
-    queryKey: ["live", "join", classTimeId],
-    queryFn: () =>
-      api(`/live/class-times/${classTimeId}/join`, { method: "POST" }),
-    enabled: Boolean(classTimeId),
-    staleTime: Infinity,
-    retry: false,
-  });
+export function requestJoinTicket(classTimeId) {
+  return api(`/live/class-times/${classTimeId}/join`, { method: "POST" });
+}
+
+/**
+ * Where the browser reaches LiveKit. In the network demo the web app's own
+ * address passes the signalling through (see vite.config.js); otherwise it
+ * is the address live-class gives in the ticket.
+ */
+export function liveKitUrl(ticket) {
+  if (import.meta.env.VITE_LIVEKIT_THROUGH_SITE === "true") {
+    const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${scheme}//${window.location.host}`;
+  }
+  return ticket.serverUrl;
 }
 
 /**

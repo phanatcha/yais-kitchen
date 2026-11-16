@@ -35,8 +35,12 @@ export function createLiveKitProvider({ url, apiKey, apiSecret, media }) {
         throw error;
       }
     },
-    async token(room, identity) {
-      const token = new AccessToken(apiKey, apiSecret, { identity, ttl: 120 });
+    async token(room, identity, name) {
+      const token = new AccessToken(apiKey, apiSecret, {
+        identity,
+        ...(name && { name }),
+        ttl: 120,
+      });
       token.addGrant({
         roomJoin: true,
         room,

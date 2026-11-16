@@ -96,20 +96,34 @@ export function createLiveService({
       row.recording = "stopped";
     }
   }
+  // Each change holds the lease for a few LiveKit calls at most, so one that
+  // finds it taken waits its turn rather than failing. The every-second
+  // check and the 5-second state reads take it too, so joins would often
+  // fail otherwise.
+  const LEASE_WAIT_MS = 3000;
+  const LEASE_RETRY_MS = 50;
+  async function takeLease(classTimeId, lease) {
+    const deadline = Date.now() + LEASE_WAIT_MS;
+    for (;;) {
+      const locked = await Session.collection.findOneAndUpdate(
+        {
+          _id: classTimeId,
+          $or: [{ lease: null }, { leaseUntil: { $lt: now() } }],
+        },
+        { $set: { lease, leaseUntil: new Date(+now() + 60000) } },
+        { returnDocument: "after" },
+      );
+      if (locked) return;
+      if (Date.now() >= deadline)
+        throw conflict("session_busy", "The class is updating. Please retry.");
+      await new Promise((resolve) => setTimeout(resolve, LEASE_RETRY_MS));
+    }
+  }
   async function mutate(classTimeId, work) {
     // Compare-and-swap reserves a lease across provider side effects, preventing
     // concurrent consent/start/end transitions across service instances.
     const lease = randomUUID();
-    const locked = await Session.collection.findOneAndUpdate(
-      {
-        _id: classTimeId,
-        $or: [{ lease: null }, { leaseUntil: { $lt: now() } }],
-      },
-      { $set: { lease, leaseUntil: new Date(+now() + 60000) } },
-      { returnDocument: "after" },
-    );
-    if (!locked)
-      throw conflict("session_busy", "The class is updating. Please retry.");
+    await takeLease(classTimeId, lease);
     try {
       const row = await Session.findById(classTimeId);
       await work(row);
@@ -188,7 +202,12 @@ export function createLiveService({
         if (row.endedAt) throw conflict("class_ended", "This class has ended.");
         await stop(row);
         await provider.room(row.room);
-        token = await provider.token(row.room, identity(user));
+        // Everyone in the call sees this name: a first name only.
+        token = await provider.token(
+          row.room,
+          identity(user),
+          user.name?.trim().split(/\s+/)[0],
+        );
         row.joinTicketsExpireAt = new Date(+now() + 125000);
       });
       return {

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import FamilyPage from "../../components/family/FamilyPage.jsx";
 import PhotoSlot from "../../components/PhotoSlot.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
@@ -73,6 +74,16 @@ function BookingList({ yaiId, when, title }) {
                     {b.class.dish}, {time.thailand}
                   </p>
                 </div>
+                {b.joinPermitted && (
+                  <div className={staff.rowActions}>
+                    <Link
+                      className={ui.primary}
+                      to={`/family/classes/${b.classTimeId}/live`}
+                    >
+                      Open the kitchen camera
+                    </Link>
+                  </div>
+                )}
               </li>
             );
           })}

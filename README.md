@@ -43,6 +43,10 @@ handover are documented in [Max's backend guide](docs/max-backend.md).
 `npm run test:max` runs their isolated database/API/journey tests; `npm run up:max`
 starts their Compose overlay after Stripe test and LiveKit credentials are set.
 
+To show a real live class between laptops on one network, with no Stripe or
+LiveKit account, run `npm run demo`. [The live class demo guide](docs/live-demo.md)
+has the steps.
+
 ## Layout
 
 | Folder                  | What                                                       |

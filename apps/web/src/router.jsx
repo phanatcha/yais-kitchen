@@ -190,6 +190,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "family/classes/:classTimeId/live",
+            ...page(
+              "Live class",
+              () => import("./pages/Family/FamilyLive.jsx"),
+              live,
+            ),
+          },
+          {
             path: "family/times",
             ...page(
               "Available times",

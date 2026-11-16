@@ -53,6 +53,17 @@
   color: var(--tamarind-brown);
 }
 
+.bannerButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 500 16px/24px var(--font-heading);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 952px) minmax(0, 472px);
@@ -66,17 +77,28 @@
   gap: 16px;
 }
 
-/* Video placeholder with the two small tiles */
+/* The call: the Yai's kitchen fills it, you top right, the others below */
 .video {
   position: relative;
   min-height: 600px;
+  overflow: hidden;
   border-radius: 28px;
   background: var(--palm-sugar);
   color: var(--tamarind-brown);
 }
 
+.stageMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #2a1c12;
+}
+
 .teacherTag {
   position: absolute;
+  z-index: 1;
   top: 24px;
   left: 24px;
 }
@@ -84,14 +106,41 @@
 .tile {
   box-sizing: border-box;
   position: absolute;
+  z-index: 1;
   display: flex;
   align-items: flex-end;
   gap: 10px;
+  overflow: hidden;
   padding: 17px;
   border: 3px solid var(--coconut-cream);
   border-radius: 28px;
   font-size: 14px;
   line-height: 20px;
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Your own camera, the way a mirror shows it */
+.mirror {
+  transform: scaleX(-1);
+}
+
+.tileName {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgb(43 29 19 / 70%);
+  color: var(--coconut-cream);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selfTile {
@@ -102,16 +151,38 @@
   background: var(--thai-tea);
 }
 
-.helperTile {
-  right: 44px;
-  bottom: 28px;
+.others {
+  position: absolute;
+  z-index: 1;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 12px;
+  max-width: calc(100% - 48px);
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.otherTile {
+  position: relative;
+  flex: none;
   width: 158px;
   height: 180px;
   background: var(--turmeric);
 }
 
+/* Someone talking gets a turmeric ring */
+.speaking {
+  border-color: var(--turmeric);
+  box-shadow: 0 0 0 3px var(--turmeric);
+}
+
 .videoLabel {
   position: absolute;
+  z-index: 1;
   bottom: 20px;
   left: 20px;
   display: flex;
@@ -193,6 +264,12 @@
 
 .danger {
   background: var(--live-red);
+}
+
+/* Mute and Stop video wait for the call to connect */
+.control:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .control:focus-visible {
