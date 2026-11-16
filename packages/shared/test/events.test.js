@@ -174,7 +174,7 @@ describe("handling one event", () => {
     expect(handler).not.toHaveBeenCalled();
     expect(channel.sent[0].queue).toBe(DEAD_LETTER_QUEUE);
     expect(headersOf(channel.sent[0])["x-error"]).toContain(
-      "data must have required property 'email'",
+      "data must have required property 'userId'",
     );
   });
 

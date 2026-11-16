@@ -221,12 +221,24 @@ publisher confirmation. An ambiguous publish may be repeated; inbox consumers
 deduplicate. The shared RabbitMQ utility uses a durable topic exchange, persistent
 messages, confirm channels, retry queues (5 attempts with increasing delay) and
 `yais.events.dead`. Consumers acknowledge only after successful processing.
+An outbox row that doesn't match `asyncapi.yaml` is moved to `outbox_failed`
+instead of holding up every later event. Admins see, retry and throw away
+dead-lettered events on the Admin Failed events page (`/api/auth/failed-events`).
+Every change a staff member makes through the API is also enqueued as
+`audit.recorded`, which auth keeps in the audit log.
 
-| Service | Publishes                                                                          | Consumes                                                                                                                       |
-| ------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Booking | `booking.confirmed`, `booking.cancelled`                                           | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund.failed`, `class_time.cancelled`, `live_class.ended` |
-| Payment | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund.failed` | `booking.cancelled`                                                                                                            |
-| Live    | `live_class.ended`, `recording.ready`, `live_class.state.changed`                  | `live_class.state.changed` for reliable room broadcast                                                                         |
+| Service | Publishes                                                                                            | Consumes                                                                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Booking | `booking.confirmed`, `booking.cancelled`, `booking.expired`, `payout.paid`, `audit.recorded`         | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund.failed`, `class_time.cancelled`, `live_class.ended`, `user.deleted` |
+| Payment | `payment.succeeded`, `payment.failed`, `payment.refunded`, `payment.refund.failed`, `audit.recorded` | `booking.cancelled`                                                                                                                            |
+| Live    | `live_class.ended`, `recording.ready`, `live_class.state.changed`, `audit.recorded`                  | `live_class.state.changed` for reliable room broadcast, `user.deleted`                                                                         |
+
+On `user.deleted`, booking keeps that person's bookings for the money records
+but removes the name (it becomes "Guest"), email, guest session, allergies,
+language, cooking experience and checklist, and rating comments. Later events
+about those bookings go out without `email`. Live-class deletes the person's
+recording consents and clears any consent in a class still running, which
+stops the recording until everyone agrees again.
 
 Notification's existing confirmation, cancellation and refund contracts are
 unchanged. The existing `recording.ready` name is preserved. Payment transitions

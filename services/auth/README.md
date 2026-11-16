@@ -21,26 +21,32 @@ A 401 from step 2 says why in `error.code`:
 
 Paths as the gateway shows them, under `/api`. `openapi.yaml` has every field and answer.
 
-| Endpoint                        | Who                    | What                                       |
-| ------------------------------- | ---------------------- | ------------------------------------------ |
-| `POST /auth/codes`              | Anyone                 | Email a sign-in code                       |
-| `POST /auth/sessions`           | Anyone                 | Sign in with the code                      |
-| `POST /auth/sessions/refresh`   | Anyone with the cookie | New access token and cookie                |
-| `DELETE /auth/sessions/current` | Anyone with the cookie | Sign out on this device                    |
-| `POST /auth/guest-sessions`     | Anyone                 | A guest token for checkout                 |
-| `GET /auth/me`                  | Signed in, not guests  | The signed-in account                      |
-| `DELETE /auth/me`               | Tourist                | Delete the account and everything about it |
-| `GET /auth/users`               | Admin                  | List accounts, such as every helper        |
-| `POST /auth/users`              | Admin                  | Make a family, helper or admin account     |
+| Endpoint                              | Who                    | What                                           |
+| ------------------------------------- | ---------------------- | ---------------------------------------------- |
+| `POST /auth/codes`                    | Anyone                 | Email a sign-in code                           |
+| `POST /auth/sessions`                 | Anyone                 | Sign in with the code                          |
+| `POST /auth/sessions/refresh`         | Anyone with the cookie | New access token and cookie                    |
+| `DELETE /auth/sessions/current`       | Anyone with the cookie | Sign out on this device                        |
+| `POST /auth/guest-sessions`           | Anyone                 | A guest token for checkout                     |
+| `GET /auth/me`                        | Signed in, not guests  | The signed-in account                          |
+| `DELETE /auth/me`                     | Tourist                | Delete the account and everything about it     |
+| `GET /auth/users`                     | Admin                  | List accounts, such as every helper            |
+| `POST /auth/users`                    | Admin                  | Make a family, helper or admin account         |
+| `PATCH /auth/users/{userId}`          | Admin                  | Change the name or role, turn off or on        |
+| `GET /auth/audit-log`                 | Admin                  | Who changed what, from every service           |
+| `GET /auth/failed-events`             | Admin                  | Events that failed 5 times                     |
+| `POST /auth/failed-events/{id}/retry` | Admin                  | Send one back to the service it failed in      |
+| `DELETE /auth/failed-events/{id}`     | Admin                  | Throw one away                                 |
+| `GET /internal/auth/users`            | Other services         | Accounts with one role, such as a Yai's family |
+| `GET /internal/auth/users/{userId}`   | Other services         | One account, to email that person              |
 
 ## Events
 
-Auth sends these and receives none.
-
-| Event                 | When                             | Who listens                                     |
-| --------------------- | -------------------------------- | ----------------------------------------------- |
-| `auth.code_requested` | Someone asked for a sign-in code | Notification                                    |
-| `user.deleted`        | A tourist deleted their account  | Every service that keeps something about people |
+| Event                 | Sent or read | When                                       | Who else                                        |
+| --------------------- | ------------ | ------------------------------------------ | ----------------------------------------------- |
+| `auth.code_requested` | Sent         | Someone asked for a sign-in code           | Notification reads it                           |
+| `user.deleted`        | Sent         | A tourist deleted their account            | Every service that keeps something about people |
+| `audit.recorded`      | Read         | A staff member changed something elsewhere | Sent by catalog, booking, payment, live-class   |
 
 ## Tokens
 
@@ -60,6 +66,7 @@ A guest token (`POST /auth/guest-sessions`, for checkout without signing in) has
 
 - Admins make family, helper and admin accounts with `POST /auth/users`. A family account needs `yaiId`, and only a family account may have one. An email that already has an account gets 409 `email_taken`.
 - `GET /auth/users?role=helper` lists accounts, 20 a page by default. Pass `nextCursor` back as `cursor` for the next page.
+- `PATCH /auth/users/{userId}` changes someone's name or role (a family needs `yaiId`), or turns the account off with `disabled: true` and back on with `false`. A new role, a new Yai or turning it off ends every session, so the person signs in again. A turned-off account gets 403 `account_disabled` when it signs in or checks out as a guest. Nobody can change their own role or turn off their own account (409 `own_account`), so there is always an admin left. An access token already given out keeps working until it runs out, at most 15 minutes.
 - A tourist deletes their own account with `DELETE /auth/me`. Auth sends `user.deleted` first, so every service forgets that person, then deletes the account, its sessions and any code. If the event can't be sent, nothing is deleted and the answer is 503. An access token already given out still passes other services' checks until it runs out, at most 15 minutes.
 
 The first admin is made from the command line, once per database:
@@ -70,6 +77,12 @@ npm run create-admin -w @yais-kitchen/auth -- admin@example.com "Admin name"
 
 That admin signs in with a code like anyone else and makes the other staff accounts. If the email already has an account, it becomes an admin.
 
+## Audit log and failed events
+
+Auth keeps the audit log for the whole platform. Every change an admin, helper or family member makes through the API (a POST, PUT, PATCH or DELETE that worked) becomes one entry: who, the `operationId`, the path, and the fields sent, with sign-in codes, tokens and card details hidden. Other services send theirs as `audit.recorded` through their outbox, so none is lost while RabbitMQ is down, and auth keeps each event once. Auth writes its own entries straight in. Operations marked `x-audit: false` in `openapi.yaml`, such as captions, are left out. The Admin Activity page reads `GET /auth/audit-log`.
+
+`GET /auth/failed-events` reads the `yais.events.dead` queue without taking anything off it. Retrying one sends it back to the queue it failed in, as a first try; every service skips an event it already handled, so that is safe. The Admin Failed events page uses these.
+
 ## What it keeps
 
 In the `auth` database.
@@ -79,6 +92,7 @@ In the `auth` database.
 | `users`         | Email, name, role, and `yaiId` for families   | Until the account is deleted   |
 | `sign_in_codes` | One per email: the code's hash, tries, expiry | A day after the code runs out  |
 | `sessions`      | Hashes of the current and last refresh tokens | 30 days after the last refresh |
+| `audit_log`     | Who changed what, from every service          | Two years                      |
 
 ## Run it
 
@@ -92,13 +106,14 @@ It listens on port 3001 and reads the root `.env`. The gateway in Docker still s
 
 ## Environment
 
-| Variable           | Default  | What                                                                            |
-| ------------------ | -------- | ------------------------------------------------------------------------------- |
-| `AUTH_PRIVATE_KEY` | required | Ed25519 private key in PEM. Signs tokens. The public key is worked out from it. |
-| `MONGO_URL`        | required | MongoDB. The service uses the `auth` database.                                  |
-| `RABBITMQ_URL`     | required | RabbitMQ, to send `auth.code_requested` and `user.deleted`                      |
-| `PORT`             | `3001`   |                                                                                 |
-| `LOG_LEVEL`        | `info`   |                                                                                 |
+| Variable           | Default  | What                                                                                                              |
+| ------------------ | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `AUTH_PRIVATE_KEY` | required | Ed25519 private key in PEM. Signs tokens. The public key is worked out from it.                                   |
+| `MONGO_URL`        | required | MongoDB. The service uses the `auth` database.                                                                    |
+| `RABBITMQ_URL`     | required | RabbitMQ: sends `auth.code_requested` and `user.deleted`, reads `audit.recorded`, and reads the dead-letter queue |
+| `INTERNAL_TOKEN`   | required | For notification's internal calls                                                                                 |
+| `PORT`             | `3001`   |                                                                                                                   |
+| `LOG_LEVEL`        | `info`   |                                                                                                                   |
 
 `packages/shared/README.md` says how to make the key pair. Every other service gets the matching `AUTH_PUBLIC_KEY`.
 

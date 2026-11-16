@@ -121,6 +121,35 @@ channels:
     messages:
       LiveStateChanged:
         $ref: "#/components/messages/LiveStateChanged"
+  classTimeHelperAssigned:
+    address: class_time.helper_assigned
+    title: Helper assigned to a class time
+    messages:
+      classTimeHelperAssigned:
+        $ref: "#/components/messages/ClassTimeHelperAssigned"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  bookingExpired:
+    address: booking.expired
+    title: Unpaid booking expired
+    messages:
+      bookingExpired: { $ref: "#/components/messages/BookingExpired" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  payoutPaid:
+    address: payout.paid
+    title: Payout paid
+    messages:
+      payoutPaid: { $ref: "#/components/messages/PayoutPaid" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  auditRecorded:
+    address: audit.recorded
+    title: A staff member changed something
+    messages:
+      auditRecorded: { $ref: "#/components/messages/AuditRecorded" }
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
 
 operations:
   # auth.code_requested
@@ -147,14 +176,17 @@ operations:
   bookingReceivesUserDeleted:
     action: receive
     channel: { $ref: "#/channels/userDeleted" }
-    summary: Booking removes the name, email, checklist and rating comments from
-      that person's bookings.
+    summary: Booking removes the name, email, allergies, language, cooking
+      experience, checklist and rating comments from that person's bookings.
+      The amounts and statuses stay, for the money records.
     tags: [{ $ref: "#/components/tags/booking" }]
     x-requirements: [privacy]
   liveClassReceivesUserDeleted:
     action: receive
     channel: { $ref: "#/channels/userDeleted" }
-    summary: Live-class deletes that person's recording consents.
+    summary: |
+      Live-class deletes that person's recording consents. A consent in a
+      class still running is cleared, which stops the recording.
     tags: [{ $ref: "#/components/tags/liveclass" }]
     x-requirements: [privacy]
   notificationReceivesUserDeleted:
@@ -193,6 +225,90 @@ operations:
     summary: Booking cancels every booking for that time, which refunds each one.
     tags: [{ $ref: "#/components/tags/booking" }]
     x-requirements: [FR-30]
+  notificationReceivesClassTimeCancelled:
+    action: receive
+    channel: { $ref: "#/channels/classTimeCancelled" }
+    summary: Notification tells the helper, if the class time had one.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-28, FR-30]
+
+  # class_time.helper_assigned
+  catalogSendsHelperAssigned:
+    action: send
+    channel: { $ref: "#/channels/classTimeHelperAssigned" }
+    summary: Admin gave a class time a helper, or a new one.
+    tags: [{ $ref: "#/components/tags/catalog" }]
+    x-requirements: [FR-28]
+  notificationReceivesHelperAssigned:
+    action: receive
+    channel: { $ref: "#/channels/classTimeHelperAssigned" }
+    summary: |
+      Notification emails the helper, and the helper taken off it if there
+      was one. Their addresses come from auth's internal API.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-28]
+
+  # booking.expired
+  bookingSendsBookingExpired:
+    action: send
+    channel: { $ref: "#/channels/bookingExpired" }
+    summary: Nobody paid for a booking before its hold ran out, so its seats went back.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-09, FR-11]
+  notificationReceivesBookingExpired:
+    action: receive
+    channel: { $ref: "#/channels/bookingExpired" }
+    summary: Notification tells the guest and links to the time picker.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-11]
+
+  # payout.paid
+  bookingSendsPayoutPaid:
+    action: send
+    channel: { $ref: "#/channels/payoutPaid" }
+    summary: Admin marked a payout paid. Sent once per payout.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [FR-36]
+  notificationReceivesPayoutPaid:
+    action: receive
+    channel: { $ref: "#/channels/payoutPaid" }
+    summary: Notification tells the Yai's family how much was paid.
+    tags: [{ $ref: "#/components/tags/notification" }]
+    x-requirements: [FR-36]
+
+  # audit.recorded
+  catalogSendsAuditRecorded:
+    action: send
+    channel: { $ref: "#/channels/auditRecorded" }
+    summary: A staff member changed something in catalog.
+    tags: [{ $ref: "#/components/tags/catalog" }]
+    x-requirements: [audit]
+  bookingSendsAuditRecorded:
+    action: send
+    channel: { $ref: "#/channels/auditRecorded" }
+    summary: A staff member changed something in booking.
+    tags: [{ $ref: "#/components/tags/booking" }]
+    x-requirements: [audit]
+  paymentSendsAuditRecorded:
+    action: send
+    channel: { $ref: "#/channels/auditRecorded" }
+    summary: A staff member changed something in payment.
+    tags: [{ $ref: "#/components/tags/payment" }]
+    x-requirements: [audit]
+  liveClassSendsAuditRecorded:
+    action: send
+    channel: { $ref: "#/channels/auditRecorded" }
+    summary: A staff member changed something in live-class.
+    tags: [{ $ref: "#/components/tags/liveclass" }]
+    x-requirements: [audit]
+  authReceivesAuditRecorded:
+    action: receive
+    channel: { $ref: "#/channels/auditRecorded" }
+    summary: |
+      Auth keeps the entry in the audit log, once per event `id`. Auth writes
+      its own entries straight to the log.
+    tags: [{ $ref: "#/components/tags/auth" }]
+    x-requirements: [audit]
 
   # booking.confirmed
   bookingSendsBookingConfirmed:
@@ -206,7 +322,9 @@ operations:
     channel: { $ref: "#/channels/bookingConfirmed" }
     summary: |
       Notification emails the booking details and shopping list, and plans the
-      reminders 24 hours and 1 hour before class.
+      reminders 24 hours and 1 hour before class. It also tells the Yai's
+      family that someone booked. A booking whose account was deleted has no
+      `email`, so only the family hears about it.
     tags: [{ $ref: "#/components/tags/notification" }]
     x-requirements: [FR-12, FR-15]
 
@@ -455,10 +573,167 @@ components:
                   classId: { $ref: "#/components/schemas/Id" }
                   yaiId: { $ref: "#/components/schemas/Id" }
                   startsAt: { $ref: "#/components/schemas/DateTime" }
+                  endsAt: { $ref: "#/components/schemas/DateTime" }
+                  helperId:
+                    description: The helper who was on it, if any.
+                    allOf: [{ $ref: "#/components/schemas/Id" }]
+                  dish: { type: string, examples: ["Khao Soi"] }
+                  yaiName: { type: string, examples: ["Yai Somsri"] }
                   reason:
                     type: string
                     maxLength: 500
                     examples: ["Yai is unwell."]
+    ClassTimeHelperAssigned:
+      name: class_time.helper_assigned
+      title: Helper assigned to a class time
+      summary: No email addresses. Notification asks auth for them.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: class_time.helper_assigned }
+              data:
+                type: object
+                required:
+                  - classTimeId
+                  - classId
+                  - yaiId
+                  - helperId
+                  - startsAt
+                  - endsAt
+                properties:
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  classId: { $ref: "#/components/schemas/Id" }
+                  yaiId: { $ref: "#/components/schemas/Id" }
+                  helperId: { $ref: "#/components/schemas/Id" }
+                  previousHelperId:
+                    description: The helper taken off this class time, if any.
+                    allOf: [{ $ref: "#/components/schemas/Id" }]
+                  startsAt: { $ref: "#/components/schemas/DateTime" }
+                  endsAt: { $ref: "#/components/schemas/DateTime" }
+                  dish: { type: string, examples: ["Khao Soi"] }
+                  yaiName: { type: string, examples: ["Yai Somsri"] }
+    BookingExpired:
+      name: booking.expired
+      title: Unpaid booking expired
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: booking.expired }
+              data:
+                type: object
+                required:
+                  - bookingId
+                  - userId
+                  - name
+                  - classTimeId
+                  - classId
+                  - yaiId
+                  - yaiName
+                  - dish
+                  - startsAt
+                  - endsAt
+                  - guests
+                properties:
+                  bookingId: { $ref: "#/components/schemas/Id" }
+                  userId: { $ref: "#/components/schemas/Id" }
+                  email:
+                    description: Missing when the account was deleted.
+                    allOf: [{ $ref: "#/components/schemas/Email" }]
+                  name: { type: string, examples: ["Alex"] }
+                  classTimeId: { $ref: "#/components/schemas/Id" }
+                  classId: { $ref: "#/components/schemas/Id" }
+                  yaiId: { $ref: "#/components/schemas/Id" }
+                  yaiName: { type: string, examples: ["Yai Somsri"] }
+                  dish: { type: string, examples: ["Khao Soi"] }
+                  startsAt: { $ref: "#/components/schemas/DateTime" }
+                  endsAt: { $ref: "#/components/schemas/DateTime" }
+                  guests: { type: integer, minimum: 1, maximum: 6 }
+    PayoutPaid:
+      name: payout.paid
+      title: Payout paid
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: payout.paid }
+              data:
+                type: object
+                required:
+                  - payoutId
+                  - yaiId
+                  - periodStart
+                  - periodEnd
+                  - amount
+                  - bookings
+                  - paidAt
+                properties:
+                  payoutId: { $ref: "#/components/schemas/Id" }
+                  yaiId: { $ref: "#/components/schemas/Id" }
+                  yaiName: { type: string, examples: ["Yai Somsri"] }
+                  periodStart: { type: string, format: date }
+                  periodEnd: { type: string, format: date }
+                  amount: { $ref: "#/components/schemas/Money" }
+                  bookings:
+                    type: integer
+                    minimum: 1
+                    description: How many classes it pays for.
+                  reference:
+                    type: string
+                    examples: ["PP20261115-0042"]
+                  paidAt: { $ref: "#/components/schemas/DateTime" }
+    AuditRecorded:
+      name: audit.recorded
+      title: A staff member changed something
+      summary: |
+        One change made through the API by an admin, helper or family member.
+        Sign-in codes, tokens and card details in `changes` are hidden.
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/Envelope"
+          - type: object
+            properties:
+              type: { const: audit.recorded }
+              data:
+                type: object
+                required: [service, action, method, path, status, actor, at]
+                properties:
+                  service:
+                    type: string
+                    pattern: "^[a-z-]{1,40}$"
+                    examples: [catalog]
+                  action:
+                    type: string
+                    maxLength: 200
+                    description: The operation's `operationId` in openapi.yaml.
+                    examples: [updateClassTime]
+                  method: { type: string, enum: [POST, PUT, PATCH, DELETE] }
+                  path:
+                    type: string
+                    maxLength: 500
+                    examples: ["/catalog/class-times/6650a1f2c3d4e5f6a7b8c9d0"]
+                  target:
+                    type: object
+                    description: The path parameters, which name what was changed.
+                    additionalProperties: { type: string }
+                  status: { type: integer, minimum: 100, maximum: 399 }
+                  actor:
+                    type: object
+                    required: [id, role]
+                    properties:
+                      id: { type: string, maxLength: 64 }
+                      role: { type: string, enum: [family, helper, admin] }
+                      name: { type: string }
+                      email: { type: string }
+                  changes:
+                    type: object
+                    description: The request body, cut short. At most 4 KB.
+                  requestId: { type: string, maxLength: 100 }
+                  at: { $ref: "#/components/schemas/DateTime" }
     BookingConfirmed:
       name: booking.confirmed
       title: Booking confirmed
@@ -474,7 +749,6 @@ components:
                 required:
                   - bookingId
                   - userId
-                  - email
                   - name
                   - classTimeId
                   - classId
@@ -488,7 +762,9 @@ components:
                 properties:
                   bookingId: { $ref: "#/components/schemas/Id" }
                   userId: { $ref: "#/components/schemas/Id" }
-                  email: { $ref: "#/components/schemas/Email" }
+                  email:
+                    description: Missing when the account was deleted.
+                    allOf: [{ $ref: "#/components/schemas/Email" }]
                   name: { type: string, examples: ["Alex"] }
                   classTimeId: { $ref: "#/components/schemas/Id" }
                   classId: { $ref: "#/components/schemas/Id" }
@@ -517,7 +793,6 @@ components:
                 required:
                   - bookingId
                   - userId
-                  - email
                   - name
                   - classTimeId
                   - startsAt
@@ -526,7 +801,9 @@ components:
                 properties:
                   bookingId: { $ref: "#/components/schemas/Id" }
                   userId: { $ref: "#/components/schemas/Id" }
-                  email: { $ref: "#/components/schemas/Email" }
+                  email:
+                    description: Missing when the account was deleted.
+                    allOf: [{ $ref: "#/components/schemas/Email" }]
                   name: { type: string, examples: ["Alex"] }
                   classTimeId: { $ref: "#/components/schemas/Id" }
                   startsAt: { $ref: "#/components/schemas/DateTime" }

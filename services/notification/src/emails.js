@@ -171,3 +171,88 @@ export function recordingReady({ name, dish, yaiName, deleteAfter, link }) {
     `It stays there until ${formatDate(deleteAfter)}.`,
   ]);
 }
+
+export function bookingExpired({ name, dish, yaiName, startsAt, link }) {
+  return message(
+    dish
+      ? `Your seats were let go: ${dish} with ${yaiName}`
+      : "Your seats were let go",
+    [
+      `Hi ${name},`,
+      `We held your seats for ${whichClass({ dish, yaiName, startsAt })}, but the payment didn't arrive in time, so we let them go. You haven't been charged.`,
+      `If you still want to cook, pick a time again: ${link}`,
+    ],
+  );
+}
+
+/** "Khao Soi with Yai Somsri, Friday 20 November 2026, 4:00 pm to 6:00 pm (Thailand time)" */
+function classLine({ dish, yaiName, startsAt, endsAt }) {
+  const when = endsAt
+    ? formatClassTime(startsAt, endsAt)
+    : `${formatDate(startsAt)}, ${formatTime(startsAt)} (Thailand time)`;
+  return dish ? `${dish} with ${yaiName}, ${when}` : when;
+}
+
+export function helperAssigned(classTime) {
+  return message(
+    classTime.dish
+      ? `You're helping: ${classTime.dish} with ${classTime.yaiName}`
+      : "You're helping with a class",
+    [
+      `Hi ${classTime.helperName},`,
+      "You're the helper for this class:",
+      classLine(classTime),
+      `See your classes and who is coming: ${classTime.link}`,
+    ],
+  );
+}
+
+export function helperRemoved(classTime) {
+  return message(
+    classTime.dish
+      ? `You're no longer helping: ${classTime.dish} with ${classTime.yaiName}`
+      : "You're no longer helping with a class",
+    [
+      `Hi ${classTime.helperName},`,
+      "Another helper is taking this class, so you don't need to be there:",
+      classLine(classTime),
+      `See your classes: ${classTime.link}`,
+    ],
+  );
+}
+
+export function classCancelledForHelper(classTime) {
+  return message(
+    classTime.dish
+      ? `Class cancelled: ${classTime.dish} with ${classTime.yaiName}`
+      : "A class you were helping with is cancelled",
+    [
+      `Hi ${classTime.helperName},`,
+      "This class is cancelled, so you don't need to be there:",
+      classLine(classTime),
+      "We've told everyone who booked and are refunding them.",
+      `See your classes: ${classTime.link}`,
+    ],
+  );
+}
+
+export function familyBooked(booking) {
+  const { familyName, yaiName, dish, guests } = booking;
+  return message(`New booking: ${dish} with ${yaiName}`, [
+    `Hi ${familyName},`,
+    `Someone just booked ${yaiName}'s ${dish} class for ${guests} ${guests === 1 ? "guest" : "guests"}.`,
+    `When: ${formatClassTime(booking.startsAt, booking.endsAt)}`,
+    `See every booking: ${booking.link}`,
+  ]);
+}
+
+export function familyPaid(payout) {
+  const { familyName, yaiName, amount, periodStart, periodEnd, bookings } =
+    payout;
+  return message(`We've paid ${yaiName ?? "your Yai"}'s share`, [
+    `Hi ${familyName},`,
+    `We've sent ${formatMoney(amount)} for ${bookings} ${bookings === 1 ? "class" : "classes"} taught from ${formatDate(periodStart)} to ${formatDate(periodEnd)}.`,
+    payout.reference ? `Payment reference: ${payout.reference}` : null,
+    `See the earnings: ${payout.link}`,
+  ]);
+}

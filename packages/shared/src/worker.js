@@ -49,6 +49,8 @@ export async function runBackend({
     store,
     durable,
     logger,
+    // Through the outbox, so an entry is kept even while RabbitMQ is down.
+    audit: (entry) => durable.enqueue(undefined, "audit.recorded", entry),
     verifyToken: await createTokenVerifier(config.AUTH_PUBLIC_KEY),
     internalToken: config.INTERNAL_TOKEN,
     ready: {

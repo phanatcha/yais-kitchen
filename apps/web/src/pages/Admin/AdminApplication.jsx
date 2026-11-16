@@ -1,11 +1,12 @@
 import { useId, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import AdminPage from "../../components/admin/AdminPage.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import {
   STAGES,
   nextStage,
   useApplication,
+  useDeleteApplication,
   useUpdateApplication,
 } from "../../lib/admin.js";
 import { REGION_OPTIONS } from "../../lib/catalog.js";
@@ -176,11 +177,77 @@ function Application({ application: a }) {
         </div>
       </form>
 
+      <DeleteApplication application={a} />
+
       <p>
         <Link to="/admin/applications" className={ui.link}>
           Back to all sign-ups
         </Link>
       </p>
     </>
+  );
+}
+
+/** For spam, or a family that asks us to forget them. It can't be undone. */
+function DeleteApplication({ application: a }) {
+  const navigate = useNavigate();
+  const remove = useDeleteApplication(a.id);
+  const [confirming, setConfirming] = useState(false);
+
+  function handleDelete() {
+    remove.mutate(undefined, {
+      onSuccess: () => navigate("/admin/applications", { replace: true }),
+    });
+  }
+
+  return (
+    <section className={`${ui.card} ${admin.form}`}>
+      <h2 className={ui.h3}>Delete this sign-up</h2>
+      {confirming ? (
+        <>
+          <p className={ui.body}>
+            Delete {a.yaiName}&apos;s sign-up for good? Everything{" "}
+            {a.contactName} sent goes, including their email and phone number.
+            This can&apos;t be undone.
+          </p>
+          <div className={admin.actions}>
+            <button
+              type="button"
+              className={ui.primary}
+              onClick={handleDelete}
+              disabled={remove.isPending}
+            >
+              {remove.isPending ? "Deleting…" : "Delete for good"}
+            </button>
+            <button
+              type="button"
+              className={ui.outline}
+              onClick={() => setConfirming(false)}
+              disabled={remove.isPending}
+            >
+              Keep it
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className={admin.actions}>
+          <p className={ui.body}>
+            For spam, or when the family asks us to forget them.
+          </p>
+          <button
+            type="button"
+            className={ui.outline}
+            onClick={() => setConfirming(true)}
+          >
+            Delete sign-up
+          </button>
+        </div>
+      )}
+      {remove.error && (
+        <p className={ui.error} role="alert">
+          {errorText(remove.error)}
+        </p>
+      )}
+    </section>
   );
 }

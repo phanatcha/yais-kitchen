@@ -34,6 +34,7 @@ Paths as the gateway shows them, under `/api`. `openapi.yaml` has every field an
 | `GET /catalog/faq`, `PUT /catalog/faq`                      | Anyone, Admin         | Read and edit the FAQ                                |
 | `POST /catalog/applications`                                | Anyone                | Apply to become a Yai                                |
 | `GET /catalog/applications`, `PATCH .../{applicationId}`    | Admin                 | List applications and move them along                |
+| `DELETE /catalog/applications/{applicationId}`              | Admin                 | Delete an application and everything sent with it    |
 | `GET /internal/catalog/class-times`                         | Booking               | Published class times of one class                   |
 | `GET /internal/catalog/class-times/{classTimeId}`           | Booking, Notification | One class time with its class, Yai and shopping list |
 
@@ -48,16 +49,20 @@ The two `/internal` paths need `X-Internal-Token` and are never reachable throug
 - **Photos and videos** are kept as media asset IDs only. Catalog builds the links from `MEDIA_PUBLIC_URL`: `{assetId}/thumb.webp`, `card.webp` and `hero.webp` for photos, `{assetId}/video.mp4` and `poster.webp` for videos. Media must store ready files at those paths. Catalog doesn't check that an asset is ready.
 - **Available times** start in the future, last at most 8 hours, and don't overlap. A family can only touch its own Yai's. Once Admin makes a class time from one, it can't be removed, even if that class time is cancelled later.
 - **Class times** start when their available time starts and last as long as the class. Each available time makes one. A class time is a draft until it has a helper, then it is published. **Only published class times can be booked**: the internal list booking reads shows nothing else.
-- **Cancelling** a class time sends `class_time.cancelled`, and booking cancels and refunds every booking for it. If the event can't be sent, the class time stays as it was and Admin gets 503. Started or cancelled class times can't change.
+- **Helpers** hear by email: giving a class time a helper, or a new one, sends `class_time.helper_assigned`. If it can't be sent, the helper doesn't change (or the class time isn't made) and Admin gets 503.
+- **Deleting** an application (`DELETE /catalog/applications/{id}`) removes everything the family sent, for spam or when they ask us to forget them.
+- **Cancelling** a class time sends `class_time.cancelled`, with its helper, and booking cancels and refunds every booking for it. If the event can't be sent, the class time stays as it was and Admin gets 503. Started or cancelled class times can't change.
 - **Helpers** are auth users. Catalog can't check a helper ID, so the admin pages pick it from `GET /api/auth/users?role=helper`.
 - **Applications** go received, kitchen visit, trial class, then approved, and can be declined before the end. A new one sends `application.received`. If that can't be sent, the application isn't kept and the family gets 503, so they send it again.
 
 ## Events
 
-| Event                  | When                             |
-| ---------------------- | -------------------------------- |
-| `application.received` | A family applied to become a Yai |
-| `class_time.cancelled` | Admin cancelled a class time     |
+| Event                        | When                                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `application.received`       | A family applied to become a Yai                                                              |
+| `class_time.cancelled`       | Admin cancelled a class time                                                                  |
+| `class_time.helper_assigned` | Admin gave a class time a helper                                                              |
+| `audit.recorded`             | A staff member changed something. Through the outbox, so none is lost while RabbitMQ is down. |
 
 Catalog doesn't receive any.
 

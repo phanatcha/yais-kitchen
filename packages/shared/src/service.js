@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import http from "node:http";
 import express from "express";
 import helmet from "helmet";
+import { auditTrail } from "./audit.js";
 import { authorizeFromSpec } from "./auth.js";
 import { errorHandler, notFound } from "./errors.js";
 import { logContext } from "./logger.js";
@@ -96,6 +97,7 @@ function keepRawBody(req, res, body) {
  * @param {string} [options.bodyLimit]
  * @param {import("express").RequestHandler[]} [options.before] Runs before the body is read and checked, such as CORS.
  * @param {boolean | number | string} [options.trustProxy] Express's "trust proxy", so `req.ip` is the caller's address behind a proxy.
+ * @param {(entry: object) => Promise<unknown>} [options.audit] Records who changed what. See audit.js.
  */
 export function createApp({
   service,
@@ -109,6 +111,7 @@ export function createApp({
   readyTimeoutMs = 2000,
   before = [],
   trustProxy = false,
+  audit,
 }) {
   const app = express();
   app.disable("x-powered-by");
@@ -136,6 +139,7 @@ export function createApp({
     app.use(specValidator(spec, { validateResponses }));
     app.use(authorizeFromSpec(auth));
   }
+  if (audit) app.use(auditTrail({ service, record: audit, logger }));
   if (routes) app.use(routes);
 
   app.use((req, res, next) => next(notFound()));

@@ -36,4 +36,10 @@ export { createLogger, logContext } from "./logger.js";
 export { createApp, startService } from "./service.js";
 export { API_SPEC_PATH, loadApiSpec, specValidator } from "./spec.js";
 export { createDurable, internalClient } from "./durable.js";
+export { auditEntry, auditTrail, redact } from "./audit.js";
+export {
+  createDeadLetters,
+  failedEventId,
+  viewFailedEvent,
+} from "./dead-letters.js";
 export { runBackend } from "./worker.js";

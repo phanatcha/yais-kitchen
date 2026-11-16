@@ -17,10 +17,14 @@ const userSchema = new Schema(
     // Family accounts only: the Yai they look after.
     yaiId: String,
     createdAt: { type: Date, required: true },
+    // Set when Admin turns the account off. It can't sign in until it is
+    // turned back on.
+    disabledAt: Date,
   },
   options,
 );
 userSchema.index({ role: 1, _id: 1 });
+userSchema.index({ role: 1, yaiId: 1 });
 
 // One code per email. A new request replaces the old code.
 const signInCodeSchema = new Schema(
@@ -47,9 +51,36 @@ const sessionSchema = new Schema(
   options,
 );
 
+// Who changed what, from every service. Kept for two years.
+const auditEntrySchema = new Schema(
+  {
+    _id: String, // the event ID, so a repeated event is kept once
+    service: { type: String, required: true },
+    action: { type: String, required: true },
+    method: String,
+    path: String,
+    target: { type: Schema.Types.Mixed, default: {} },
+    status: Number,
+    actor: {
+      _id: false,
+      id: { type: String, required: true },
+      role: String,
+      name: String,
+      email: String,
+    },
+    changes: { type: Schema.Types.Mixed, default: {} },
+    requestId: String,
+    at: { type: Date, required: true, expires: 2 * 365 * DAY_S },
+  },
+  { ...options, minimize: false },
+);
+auditEntrySchema.index({ at: -1, _id: -1 });
+auditEntrySchema.index({ "actor.id": 1, at: -1 });
+auditEntrySchema.index({ service: 1, at: -1 });
+
 /**
- * The `users`, `sign_in_codes` and `sessions` collections. Old codes and
- * sessions delete themselves.
+ * The `users`, `sign_in_codes`, `sessions` and `audit_log` collections. Old
+ * codes, sessions and audit entries delete themselves.
  * @param {import("mongoose").Connection} connection
  */
 export function createStore(connection) {
@@ -60,6 +91,7 @@ export function createStore(connection) {
     User: model("User", userSchema, "users"),
     SignInCode: model("SignInCode", signInCodeSchema, "sign_in_codes"),
     Session: model("Session", sessionSchema, "sessions"),
+    AuditEntry: model("AuditEntry", auditEntrySchema, "audit_log"),
     /** Builds the indexes. The unique email index must exist before traffic. */
     async init() {
       await Promise.all(

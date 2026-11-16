@@ -21,6 +21,11 @@ const PREFIXES = [
 const LAST_FR = 39;
 // How It Works is a static page, so no endpoint or event serves it.
 const NO_API = ["FR-02"];
+// Needs that aren't functional requirements: deleting data, the audit log,
+// and running the platform (such as retrying failed events).
+const OTHER_NEEDS = ["privacy", "audit", "operations"];
+// Every service that changes things sends its own audit entries.
+const MANY_SENDERS = ["auditRecorded"];
 
 const operations = Object.entries(openapi.paths).flatMap(([path, item]) =>
   METHODS.filter((method) => item[method]).map((method) => ({
@@ -35,7 +40,7 @@ const events = Object.entries(asyncapi.operations).map(([name, op]) => ({
 }));
 
 const isRequirement = (id) => {
-  if (id === "privacy") return true;
+  if (OTHER_NEEDS.includes(id)) return true;
   const match = /^FR-(\d{2})$/.exec(id);
   return Boolean(match) && Number(match[1]) >= 1 && Number(match[1]) <= LAST_FR;
 };
@@ -87,7 +92,12 @@ describe("asyncapi.yaml", () => {
       const uses = events.filter(
         ({ op }) => op.channel.$ref === `#/channels/${key}`,
       );
-      expect(uses.filter(({ op }) => op.action === "send")).toHaveLength(1);
+      const senders = uses.filter(({ op }) => op.action === "send");
+      if (MANY_SENDERS.includes(key)) {
+        expect(senders.length).toBeGreaterThan(0);
+      } else {
+        expect(senders).toHaveLength(1);
+      }
       expect(uses.some(({ op }) => op.action === "receive")).toBe(true);
 
       const [message] = Object.values(channel.messages);

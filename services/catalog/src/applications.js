@@ -70,6 +70,17 @@ export function createApplications({
       };
     },
 
+    /**
+     * Admin deletes an application, such as spam or one the family asked us
+     * to forget. Everything the family sent goes with it.
+     */
+    async remove(id) {
+      const { deletedCount } = mongoose.isValidObjectId(id)
+        ? await Application.deleteOne({ _id: id })
+        : { deletedCount: 0 };
+      if (deletedCount !== 1) throw notFound();
+    },
+
     async update(id, { stage, notes }) {
       const doc = mongoose.isValidObjectId(id)
         ? await Application.findById(id).lean()

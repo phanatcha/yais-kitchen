@@ -15,6 +15,8 @@ const TABS = [
   ["/admin/faq", "Help answers"],
   ["/admin/money", "Money"],
   ["/admin/ratings", "Ratings"],
+  ["/admin/activity", "Activity"],
+  ["/admin/failed-events", "Failed events"],
 ];
 
 /**

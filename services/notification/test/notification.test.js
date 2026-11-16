@@ -2,6 +2,8 @@ import { createLogger, MAX_ATTEMPTS } from "@yais-kitchen/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   SAMPLE_CLASS_TIME,
+  SAMPLE_FAMILY,
+  SAMPLE_HELPER,
   SAMPLE_TYPES,
   sampleBooking,
   sampleData,
@@ -10,6 +12,7 @@ import { createLinks } from "../src/links.js";
 import { createNotification } from "../src/notification.js";
 import { createStore } from "../src/store.js";
 import {
+  fakeAuth,
   fakeCatalog,
   fakeMailer,
   makeEvent,
@@ -33,6 +36,7 @@ let store;
 let clock;
 let mailer;
 let catalog;
+let auth;
 let notification;
 const now = () => clock;
 
@@ -51,10 +55,13 @@ beforeEach(async () => {
   );
   mailer = fakeMailer();
   catalog = fakeCatalog(SAMPLE_CLASS_TIME);
+  // No family by default, so each test sees only the emails it is about.
+  auth = fakeAuth({ users: [SAMPLE_HELPER] });
   notification = createNotification({
     store,
     mailer,
     catalog,
+    auth,
     links: createLinks("http://localhost:5173"),
     adminEmail: "admin@example.com",
     logger,
@@ -329,6 +336,7 @@ describe("account deleted", () => {
 
 describe("repeated events", () => {
   it("sends nothing the second time, whatever the event", async () => {
+    auth.families = [SAMPLE_FAMILY];
     for (const type of SAMPLE_TYPES) {
       const each = event(type);
       await deliver(each);
@@ -336,9 +344,10 @@ describe("repeated events", () => {
       await deliver(each);
       expect(mailer.sent.length, type).toBe(sent);
     }
-    // Code, application (family and Admin), booked, after class, recording,
-    // cancelled, refund.
-    expect(subjects()).toHaveLength(8);
+    // Code, application (family and Admin), booked (tourist and family),
+    // after class, recording, cancelled (tourist and helper), refund,
+    // expired, helper assigned, payout.
+    expect(subjects()).toHaveLength(13);
   });
 
   it("sends one email when two copies arrive at the same time", async () => {
@@ -484,5 +493,156 @@ describe("reminders", () => {
     notification.reminders.start(5);
     await expect.poll(() => mailer.sent.length, { timeout: 5000 }).toBe(1);
     await notification.reminders.stop();
+  });
+});
+
+describe("the Yai's family", () => {
+  beforeEach(() => {
+    auth.families = [SAMPLE_FAMILY];
+  });
+
+  it("hears when someone books, after the tourist", async () => {
+    await deliver(event("booking.confirmed"));
+
+    expect(mailer.sent.map((email) => [email.to, email.subject])).toEqual([
+      ["guest@example.com", "You're booked: Khao Soi with Yai Somsri"],
+      ["somsri.family@example.com", "New booking: Khao Soi with Yai Somsri"],
+    ]);
+    const { text } = mailer.sent[1];
+    expect(text).toContain("Hi Ploy,");
+    expect(text).toContain(
+      "Someone just booked Yai Somsri's Khao Soi class for 2 guests.",
+    );
+    expect(text).toContain("http://localhost:5173/family/bookings");
+    // The family never sees the tourist's name or address.
+    expect(text).not.toContain("Alex");
+    expect(text).not.toContain("guest@example.com");
+  });
+
+  it("is told each booking once, even when auth was down at first", async () => {
+    const booked = event("booking.confirmed");
+    auth.answer = new Error("Auth answered 503.");
+    await expect(deliver(booked)).rejects.toThrow("Auth answered 503.");
+    auth.answer = null;
+    await deliver(booked, 2);
+
+    expect(mailer.sent.map((email) => email.to)).toEqual([
+      "guest@example.com",
+      "somsri.family@example.com",
+    ]);
+  });
+
+  it("still hears about a booking whose account was deleted", async () => {
+    const { email, ...anonymous } = sampleBooking({ name: "Guest" });
+    void email;
+    await deliver(makeEvent("booking.confirmed", anonymous, clock));
+
+    expect(mailer.sent.map((sent) => sent.to)).toEqual([
+      "somsri.family@example.com",
+    ]);
+    expect(await store.models.Reminder.countDocuments()).toBe(0);
+  });
+
+  it("hears how much was paid", async () => {
+    await deliver(event("payout.paid"));
+
+    expect(mailer.sent).toHaveLength(1);
+    const [email] = mailer.sent;
+    expect(email.to).toBe("somsri.family@example.com");
+    expect(email.subject).toBe("We've paid Yai Somsri's share");
+    expect(email.text).toContain(
+      "We've sent THB 1,350 for 1 class taught from Monday 16 November 2026 to Sunday 22 November 2026.",
+    );
+    expect(email.text).toContain("Payment reference: PP20261122-0042");
+    expect(email.text).toContain("http://localhost:5173/family/earnings");
+  });
+});
+
+describe("helpers", () => {
+  it("hears when they're given a class", async () => {
+    await deliver(event("class_time.helper_assigned"));
+
+    expect(auth.calls).toEqual([["getUser", SAMPLE_HELPER.id]]);
+    const [email] = mailer.sent;
+    expect(email.to).toBe("helper@example.com");
+    expect(email.subject).toBe("You're helping: Khao Soi with Yai Somsri");
+    expect(email.text).toContain("Hi Nok,");
+    expect(email.text).toContain(
+      "Khao Soi with Yai Somsri, Friday 20 November 2026, 4:00 pm to 5:30 pm (Thailand time)",
+    );
+    expect(email.text).toContain("http://localhost:5173/helper");
+  });
+
+  it("tells the helper taken off a class too", async () => {
+    const other = {
+      ...SAMPLE_HELPER,
+      id: "6650a1f2c3d4e5f6a7b8c9f7",
+      email: "other@example.com",
+      name: "Dao",
+    };
+    auth.users.push(other);
+    const data = {
+      ...sampleData("class_time.helper_assigned", { now: clock }),
+      previousHelperId: other.id,
+    };
+    await deliver(makeEvent("class_time.helper_assigned", data, clock));
+
+    expect(mailer.sent.map((email) => [email.to, email.subject])).toEqual([
+      ["helper@example.com", "You're helping: Khao Soi with Yai Somsri"],
+      [
+        "other@example.com",
+        "You're no longer helping: Khao Soi with Yai Somsri",
+      ],
+    ]);
+  });
+
+  it("hears when their class is cancelled", async () => {
+    await deliver(event("class_time.cancelled"));
+
+    const [email] = mailer.sent;
+    expect(email.to).toBe("helper@example.com");
+    expect(email.subject).toBe("Class cancelled: Khao Soi with Yai Somsri");
+    expect(email.text).toContain("We've told everyone who booked");
+  });
+
+  it("isn't emailed once the account is gone or turned off", async () => {
+    auth.users = [{ ...SAMPLE_HELPER, disabled: true }];
+    await deliver(event("class_time.helper_assigned"));
+    auth.users = [];
+    await deliver(event("class_time.cancelled"));
+    expect(mailer.sent).toEqual([]);
+  });
+
+  it("isn't emailed about a cancelled class time that had no helper", async () => {
+    const { helperId, ...data } = sampleData("class_time.cancelled", {
+      now: clock,
+    });
+    void helperId;
+    await deliver(makeEvent("class_time.cancelled", data, clock));
+    expect(auth.calls).toEqual([]);
+    expect(mailer.sent).toEqual([]);
+  });
+});
+
+describe("unpaid booking expired", () => {
+  it("tells the guest and links back to the time picker", async () => {
+    await deliver(event("booking.expired"));
+
+    const [email] = mailer.sent;
+    expect(email.to).toBe("guest@example.com");
+    expect(email.subject).toBe(
+      "Your seats were let go: Khao Soi with Yai Somsri",
+    );
+    expect(email.text).toContain("You haven't been charged.");
+    expect(email.text).toContain(
+      "http://localhost:5173/classes/6650a1f2c3d4e5f6a7b8c9e3/book",
+    );
+  });
+
+  it("emails nobody when the account was deleted", async () => {
+    const { email, ...data } = sampleData("booking.expired", { now: clock });
+    void email;
+    await deliver(makeEvent("booking.expired", data, clock));
+    expect(mailer.sent).toEqual([]);
   });
 });

@@ -1,8 +1,18 @@
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { MAX_TRIES } from "../src/auth.js";
 import {
   askForCode,
+  fakeDeadLetters,
+  INTERNAL_TOKEN,
   refreshCookieOf,
   signIn,
   startAuth,
@@ -687,5 +697,290 @@ describe("deleting an account", () => {
   it("is only for tourists", async () => {
     const helper = await staff("helper", "helper@example.com");
     expect((await deleteMe(helper.token)).status).toBe(403);
+  });
+});
+
+describe("changing an account", () => {
+  let admin;
+  beforeEach(async () => {
+    admin = await staff("admin", "admin@example.com");
+  });
+  const change = (id, body, token = admin.token) =>
+    bearer(request(ctx.app).patch(`/auth/users/${id}`), token).send(body);
+  const refresh = (token) =>
+    withCookie(request(ctx.app).post("/auth/sessions/refresh"), token);
+
+  it("changes the role and makes the person sign in again", async () => {
+    const helper = await staff("helper", "helper@example.com");
+    const res = await change(helper.user.id, { role: "admin" });
+
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body).toMatchObject({ role: "admin", name: "A helper" });
+    expect((await refresh(helper.refresh)).status).toBe(401);
+    const again = await signIn(ctx, "helper@example.com");
+    expect(again.user.role).toBe("admin");
+  });
+
+  it("renames without ending any session", async () => {
+    const helper = await staff("helper", "helper@example.com");
+    const res = await change(helper.user.id, { name: "  Nok  " });
+    expect(res.body.name).toBe("Nok");
+    expect((await refresh(helper.refresh)).status).toBe(200);
+  });
+
+  it("needs a Yai for a family account, and drops it for anyone else", async () => {
+    const helper = await staff("helper", "helper@example.com");
+    const noYai = await change(helper.user.id, { role: "family" });
+    expect(noYai.status).toBe(400);
+    expect(noYai.body.error.details[0].field).toBe("yaiId");
+
+    const family = await change(helper.user.id, {
+      role: "family",
+      yaiId: YAI_ID,
+    });
+    expect(family.body).toMatchObject({ role: "family", yaiId: YAI_ID });
+
+    const back = await change(helper.user.id, { role: "helper" });
+    expect(back.body.role).toBe("helper");
+    expect(back.body.yaiId).toBeUndefined();
+    expect((await change(helper.user.id, { yaiId: YAI_ID })).status).toBe(400);
+  });
+
+  it("turns an account off, so it can't sign in or check out, then on again", async () => {
+    const tourist = await signIn(ctx, EMAIL);
+    const off = await change(tourist.user.id, { disabled: true });
+
+    expect(off.status).toBe(200);
+    expect(off.body.disabledAt).toBe(new Date(ctx.clock.time).toISOString());
+    expect((await refresh(tourist.refresh)).status).toBe(401);
+    expect(
+      (await bearer(request(ctx.app).get("/auth/me"), tourist.token)).status,
+    ).toBe(401);
+
+    const code = await askForCode(ctx, EMAIL);
+    const signInAgain = await post("/auth/sessions", { email: EMAIL, code });
+    expect(signInAgain.status).toBe(403);
+    expect(signInAgain.body.error.code).toBe("account_disabled");
+    const guest = await post("/auth/guest-sessions", {
+      email: EMAIL,
+      name: "Alex",
+    });
+    expect(guest.status).toBe(403);
+    expect(guest.body.error.code).toBe("account_disabled");
+
+    const on = await change(tourist.user.id, { disabled: false });
+    expect(on.body.disabledAt).toBeUndefined();
+    expect((await signIn(ctx, EMAIL)).user.id).toBe(tourist.user.id);
+  });
+
+  it("won't let anyone change their own role or turn themselves off", async () => {
+    for (const body of [{ role: "helper" }, { disabled: true }]) {
+      const res = await change(admin.user.id, body);
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe("own_account");
+    }
+    expect((await change(admin.user.id, { name: "Pim" })).status).toBe(200);
+  });
+
+  it("answers 404 for an account that doesn't exist, and is for admins only", async () => {
+    expect(
+      (await change("6650a1f2c3d4e5f6a7b8ffff", { name: "X" })).status,
+    ).toBe(404);
+    const helper = await staff("helper", "helper@example.com");
+    expect(
+      (await change(admin.user.id, { name: "X" }, helper.token)).status,
+    ).toBe(403);
+  });
+});
+
+describe("what notification reads", () => {
+  const internal = (path, token = INTERNAL_TOKEN) =>
+    request(ctx.app).get(path).set("x-internal-token", token);
+
+  it("gives one person, and the turned-on family of one Yai", async () => {
+    const family = await db.store.User.create({
+      email: "ploy@example.com",
+      name: "Ploy",
+      role: "family",
+      yaiId: YAI_ID,
+      createdAt: new Date(),
+    });
+    await db.store.User.create({
+      email: "off@example.com",
+      name: "Off",
+      role: "family",
+      yaiId: YAI_ID,
+      createdAt: new Date(),
+      disabledAt: new Date(),
+    });
+    await db.store.User.create({
+      email: "other@example.com",
+      name: "Other",
+      role: "family",
+      yaiId: "6650a1f2c3d4e5f6a7b8c9d2",
+      createdAt: new Date(),
+    });
+
+    const one = await internal(`/internal/auth/users/${family.id}`);
+    expect(one.body).toEqual({
+      id: family.id,
+      email: "ploy@example.com",
+      name: "Ploy",
+      role: "family",
+      yaiId: YAI_ID,
+      disabled: false,
+    });
+    const list = await internal(
+      `/internal/auth/users?role=family&yaiId=${YAI_ID}`,
+    );
+    expect(list.body.items.map((u) => u.email)).toEqual(["ploy@example.com"]);
+    expect(
+      (await internal("/internal/auth/users/6650a1f2c3d4e5f6a7b8ffff")).status,
+    ).toBe(404);
+  });
+
+  it("needs the internal token", async () => {
+    expect(
+      (
+        await internal(
+          "/internal/auth/users?role=family",
+          "wrong-token-wrong-token-wrong-token",
+        )
+      ).status,
+    ).toBe(401);
+  });
+});
+
+describe("the audit log", () => {
+  let admin;
+  beforeEach(async () => {
+    admin = await staff("admin", "admin@example.com");
+  });
+  const log = (query = {}, token = admin.token) =>
+    bearer(request(ctx.app).get("/auth/audit-log").query(query), token);
+  const entry = (overrides = {}) => ({
+    service: "catalog",
+    action: "updateClassTime",
+    method: "PATCH",
+    path: "/catalog/class-times/6650a1f2c3d4e5f6a7b8c9d0",
+    target: { classTimeId: "6650a1f2c3d4e5f6a7b8c9d0" },
+    status: 200,
+    actor: { id: admin.user.id, role: "admin", name: "A admin" },
+    changes: { status: "cancelled" },
+    at: new Date(ctx.clock.time).toISOString(),
+    ...overrides,
+  });
+
+  it("records auth's own changes, without the secrets", async () => {
+    const res = await bearer(
+      request(ctx.app).post("/auth/users"),
+      admin.token,
+    ).send({ email: "nok@example.com", name: "Nok", role: "helper" });
+    expect(res.status).toBe(201);
+
+    await vi.waitFor(async () => {
+      expect((await log()).body.items).toHaveLength(1);
+    });
+    const [kept] = (await log()).body.items;
+    expect(kept).toMatchObject({
+      service: "auth",
+      action: "createUser",
+      method: "POST",
+      path: "/auth/users",
+      status: 201,
+      actor: { id: admin.user.id, role: "admin", email: "admin@example.com" },
+      changes: { email: "nok@example.com", name: "Nok", role: "helper" },
+    });
+  });
+
+  it("keeps what other services send once, newest first, a page at a time", async () => {
+    const eventId = "11111111-1111-4111-8111-111111111111";
+    await ctx.auth.recordAudit(entry(), eventId);
+    await ctx.auth.recordAudit(entry(), eventId);
+    ctx.clock.time += 1000;
+    await ctx.auth.recordAudit(
+      entry({
+        service: "booking",
+        action: "markPayoutPaid",
+        at: new Date(ctx.clock.time).toISOString(),
+      }),
+    );
+
+    const first = await log({ limit: 1 });
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(first.body.items.map((e) => e.action)).toEqual(["markPayoutPaid"]);
+    const second = await log({ limit: 1, cursor: first.body.nextCursor });
+    expect(second.body.items.map((e) => e.id)).toEqual([eventId]);
+    expect(second.body.nextCursor).toBeNull();
+    expect((await log({ service: "catalog" })).body.items).toHaveLength(1);
+    expect(
+      (await log({ actorId: "6650a1f2c3d4e5f6a7b8ffff" })).body.items,
+    ).toEqual([]);
+    expect((await log({ cursor: "nope" })).status).toBe(400);
+  });
+
+  it("is for admins only, and leaves out tourists' own changes", async () => {
+    const tourist = await signIn(ctx, EMAIL);
+    expect((await log({}, tourist.token)).status).toBe(403);
+    await bearer(request(ctx.app).delete("/auth/me"), tourist.token);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect((await log()).body.items).toEqual([]);
+  });
+});
+
+describe("failed events", () => {
+  const failed = {
+    id: "0123456789abcdef0123456789abcdef",
+    eventId: "22222222-2222-4222-8222-222222222222",
+    type: "booking.confirmed",
+    queue: "notification",
+    error: "Auth answered 503.",
+    attempts: 5,
+    occurredAt: "2026-11-16T09:00:00.000Z",
+    failedAt: "2026-11-16T09:03:00.000Z",
+    data: { bookingId: "6650a1f2c3d4e5f6a7b8c9e1" },
+  };
+  let admin;
+  let dead;
+  beforeEach(async () => {
+    dead = fakeDeadLetters([failed, { ...failed, id: "f".repeat(32) }]);
+    ctx = await startAuth(db.store, { deadLetters: dead });
+    admin = await staff("admin", "admin@example.com");
+  });
+  const as = (req, token = admin.token) => bearer(req, token);
+
+  it("lists them, retries one and throws one away", async () => {
+    const list = await as(request(ctx.app).get("/auth/failed-events"));
+    expect(list.status, JSON.stringify(list.body)).toBe(200);
+    expect(list.body).toEqual({
+      items: [failed, { ...failed, id: "f".repeat(32) }],
+      total: 2,
+    });
+
+    const retried = await as(
+      request(ctx.app).post(`/auth/failed-events/${failed.id}/retry`),
+    );
+    expect(retried.status).toBe(200);
+    expect(retried.body.eventId).toBe(failed.eventId);
+    expect(dead.retried).toEqual([failed.id]);
+
+    const gone = await as(
+      request(ctx.app).delete(`/auth/failed-events/${"f".repeat(32)}`),
+    );
+    expect(gone.status).toBe(204);
+    expect(dead.discarded).toEqual(["f".repeat(32)]);
+
+    const again = await as(
+      request(ctx.app).post(`/auth/failed-events/${failed.id}/retry`),
+    );
+    expect(again.status).toBe(404);
+  });
+
+  it("is for admins only", async () => {
+    const helper = await staff("helper", "helper@example.com");
+    expect(
+      (await as(request(ctx.app).get("/auth/failed-events"), helper.token))
+        .status,
+    ).toBe(403);
   });
 });

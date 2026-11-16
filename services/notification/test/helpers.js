@@ -65,3 +65,28 @@ export function fakeCatalog(answer) {
   };
   return catalog;
 }
+
+/**
+ * Answers like auth's internal API. `users` are found by ID, `families` by
+ * Yai; a test may change either. Set `answer` to an Error to make every call
+ * fail.
+ */
+export function fakeAuth({ users = [], families = [] } = {}) {
+  const auth = {
+    calls: [],
+    answer: null,
+    users,
+    families,
+    async getUser(userId) {
+      auth.calls.push(["getUser", userId]);
+      if (auth.answer instanceof Error) throw auth.answer;
+      return auth.users.find((user) => user.id === userId) ?? null;
+    },
+    async familiesOf(yaiId) {
+      auth.calls.push(["familiesOf", yaiId]);
+      if (auth.answer instanceof Error) throw auth.answer;
+      return auth.families.filter((family) => family.yaiId === yaiId);
+    },
+  };
+  return auth;
+}

@@ -17,6 +17,7 @@ const config = loadConfig({
   MONGO_URL: { type: "url" },
   RABBITMQ_URL: { type: "url" },
   AUTH_PRIVATE_KEY: { type: "pem" },
+  INTERNAL_TOKEN: {},
 });
 
 const service = "auth";
@@ -31,7 +32,6 @@ const connection = await mongoose
 const store = createStore(connection);
 await store.init();
 
-// Auth only sends events.
 const events = await connectEvents({
   url: config.RABBITMQ_URL,
   service,
@@ -46,9 +46,16 @@ const auth = createAuth({
   logger,
 });
 
+// Every service sends its audit entries here, through RabbitMQ.
+await events.consume({
+  "audit.recorded": (event) => auth.recordAudit(event.data, event.id),
+});
+
 const app = createAuthApp({
   auth,
   verifyToken: await createTokenVerifier(publicKeyOf(config.AUTH_PRIVATE_KEY)),
+  internalToken: config.INTERNAL_TOKEN,
+  deadLetters: events.deadLetters,
   logger,
   ready: {
     database: () => connection.readyState === 1,

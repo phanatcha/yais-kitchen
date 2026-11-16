@@ -93,6 +93,13 @@ export function useUpdateApplication(applicationId) {
   );
 }
 
+/** DELETE /catalog/applications/{id}: everything the family sent goes. */
+export function useDeleteApplication(applicationId) {
+  return useAdminMutation(["catalog", "applications"], () =>
+    api(`/catalog/applications/${applicationId}`, { method: "DELETE" }),
+  );
+}
+
 // ---------- Yais, classes and recipes ----------
 
 /** GET /catalog/yais with hidden ones too. */
@@ -191,6 +198,48 @@ export function useUsers(role) {
 export function useCreateUser() {
   return useAdminMutation(["auth", "users"], (user) =>
     api("/auth/users", { method: "POST", body: user }),
+  );
+}
+
+/**
+ * PATCH /auth/users/{id}: `{ name }`, `{ role, yaiId? }` or
+ * `{ disabled }`. A new role or a turned-off account signs the person out.
+ */
+export function useUpdateUser() {
+  return useAdminMutation(["auth", "users"], ({ id, ...patch }) =>
+    api(`/auth/users/${id}`, { method: "PATCH", body: patch }),
+  );
+}
+
+// ---------- Activity and failed events ----------
+
+/** GET /auth/audit-log, newest first, optionally one service. */
+export function useAuditLog(service) {
+  return usePaged(["auth", "audit-log"], "/auth/audit-log", {
+    service: service || undefined,
+  });
+}
+
+/** GET /auth/failed-events: what is waiting in the dead-letter queue. */
+export function useFailedEvents() {
+  return useQuery({
+    queryKey: ["auth", "failed-events"],
+    queryFn: ({ signal }) =>
+      api(withQuery("/auth/failed-events", { limit: 200 }), { signal }),
+  });
+}
+
+/** POST /auth/failed-events/{id}/retry */
+export function useRetryFailedEvent() {
+  return useAdminMutation(["auth", "failed-events"], (id) =>
+    api(`/auth/failed-events/${id}/retry`, { method: "POST" }),
+  );
+}
+
+/** DELETE /auth/failed-events/{id} */
+export function useDiscardFailedEvent() {
+  return useAdminMutation(["auth", "failed-events"], (id) =>
+    api(`/auth/failed-events/${id}`, { method: "DELETE" }),
   );
 }
 

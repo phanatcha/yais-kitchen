@@ -314,4 +314,29 @@ describe("live access, persisted state and recording consent", () => {
       status: 403,
     });
   });
+  it("forgets a deleted account's recording consents, and stops counting them", async () => {
+    await connected();
+    await api.consent(ids.time, true, h.user);
+    await api.consent(ids.time, true, helper);
+    const deleted = {
+      id: crypto.randomUUID(),
+      type: "user.deleted",
+      occurredAt: new Date().toISOString(),
+      version: 1,
+      data: { userId: ids.user },
+    };
+    await api.handlers["user.deleted"](deleted);
+    await api.handlers["user.deleted"](deleted);
+
+    const row = await h.store.Session.findById(ids.time).lean();
+    expect(row.consentAudit.map((c) => c.identity)).toEqual([
+      `helper-${ids.helper}`,
+    ]);
+    const tourist = row.participants.find(
+      (p) => p.identity === `tourist-${ids.user}`,
+    );
+    expect(tourist.consent).toBeUndefined();
+    const state = await api.state(ids.time, helper);
+    expect(state.recording.everyoneAgreed).toBe(false);
+  });
 });

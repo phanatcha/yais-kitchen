@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import amqp from "amqplib";
+import { createDeadLetters } from "./dead-letters.js";
 import { serviceUnavailable } from "./errors.js";
 import { createEventChecker, loadEventSpec } from "./event-spec.js";
 import { logContext } from "./logger.js";
@@ -101,6 +102,7 @@ export function createDeliveryHandler({
         ...headers,
         "x-failed-queue": queue,
         "x-error": "not a valid event",
+        "x-dead-at": new Date().toISOString(),
       });
       return;
     }
@@ -128,6 +130,7 @@ export function createDeliveryHandler({
           "x-attempts": attempt,
           "x-failed-queue": queue,
           "x-error": String(error?.message ?? error).slice(0, 500),
+          "x-dead-at": new Date().toISOString(),
         });
         return;
       }
@@ -389,5 +392,14 @@ export async function connectEvents({
     channel = null;
   }
 
-  return { publish, consume, isReady, close };
+  /**
+   * For a person to read, retry and throw away events in the dead-letter
+   * queue. Each call uses its own channel.
+   */
+  const deadLetters = createDeadLetters(
+    () => connection.createConfirmChannel(),
+    DEAD_LETTER_QUEUE,
+  );
+
+  return { publish, consume, isReady, close, deadLetters };
 }

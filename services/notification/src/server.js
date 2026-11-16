@@ -6,6 +6,7 @@ import {
   startService,
 } from "@yais-kitchen/shared";
 import mongoose from "mongoose";
+import { createAuthClient } from "./auth.js";
 import { createCatalogClient } from "./catalog.js";
 import { createLinks } from "./links.js";
 import { createMailer } from "./mailer.js";
@@ -26,6 +27,8 @@ const config = loadConfig({
   WEB_ORIGIN: { type: "url" },
   // When not set, the mock server answers for catalog.
   CATALOG_URL: { type: "url", optional: true },
+  // Where to look up helpers' and families' emails.
+  AUTH_URL: { type: "url", default: "http://127.0.0.1:3001" },
   MOCK_URL: { type: "url", default: "http://127.0.0.1:4010" },
   INTERNAL_TOKEN: {},
   REMINDER_CHECK_MS: { type: "integer", default: 30_000 },
@@ -58,6 +61,10 @@ const { handlers, reminders } = createNotification({
   mailer,
   catalog: createCatalogClient({
     baseUrl: catalogUrl,
+    internalToken: config.INTERNAL_TOKEN,
+  }),
+  auth: createAuthClient({
+    baseUrl: config.AUTH_URL,
     internalToken: config.INTERNAL_TOKEN,
   }),
   links: createLinks(config.WEB_ORIGIN),

@@ -284,6 +284,20 @@ export const router = createBrowserRouter([
               () => import("./pages/Admin/AdminRatings.jsx"),
             ),
           },
+          {
+            path: "admin/activity",
+            ...page(
+              "Admin: activity",
+              () => import("./pages/Admin/AdminActivity.jsx"),
+            ),
+          },
+          {
+            path: "admin/failed-events",
+            ...page(
+              "Admin: failed events",
+              () => import("./pages/Admin/AdminFailedEvents.jsx"),
+            ),
+          },
 
           { path: "*", element: <NotFound /> },
         ],

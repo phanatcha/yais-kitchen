@@ -113,10 +113,13 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       CATALOG_URL: http://catalog:3002
+      AUTH_URL: http://auth:3001
     depends_on:
       <<: *needs
       mailpit:
         condition: service_started
+      auth:
+        condition: service_healthy
     ports: ["127.0.0.1:3007:3007"]
     healthcheck:
       <<: *ready

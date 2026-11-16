@@ -1,4 +1,8 @@
-import { createApp, unauthorized } from "@yais-kitchen/shared";
+import {
+  createApp,
+  serviceUnavailable,
+  unauthorized,
+} from "@yais-kitchen/shared";
 import express from "express";
 import { SESSION_MS } from "./auth.js";
 
@@ -27,8 +31,11 @@ function readRefreshCookie(req) {
 
 const emailOf = (body) => body.email.trim().toLowerCase();
 
-/** @param {ReturnType<typeof import("./auth.js").createAuth>} auth */
-export function authRoutes(auth) {
+/**
+ * @param {ReturnType<typeof import("./auth.js").createAuth>} auth
+ * @param {ReturnType<typeof import("@yais-kitchen/shared").createDeadLetters>} [deadLetters]
+ */
+export function authRoutes(auth, deadLetters) {
   const routes = express.Router();
 
   routes.post("/auth/codes", async (req, res) => {
@@ -103,6 +110,60 @@ export function authRoutes(auth) {
       );
   });
 
+  routes.patch("/auth/users/:userId", async (req, res) => {
+    const { name, role, yaiId, disabled } = req.body;
+    res.json(
+      await auth.updateUser(
+        req.params.userId,
+        { name, role, yaiId, disabled },
+        req.user,
+      ),
+    );
+  });
+
+  // Who changed what, from every service.
+  routes.get("/auth/audit-log", async (req, res) => {
+    res.json(
+      await auth.listAudit({
+        service: req.query.service,
+        actorId: req.query.actorId,
+        limit: Number(req.query.limit ?? 20),
+        cursor: req.query.cursor,
+      }),
+    );
+  });
+
+  // Events that failed 5 times, waiting in the dead-letter queue.
+  const failedEvents = () => {
+    if (!deadLetters) throw serviceUnavailable();
+    return deadLetters;
+  };
+  routes.get("/auth/failed-events", async (req, res) => {
+    res.json(
+      await failedEvents().list({ limit: Number(req.query.limit ?? 50) }),
+    );
+  });
+  routes.post("/auth/failed-events/:failedEventId/retry", async (req, res) => {
+    res.json(await failedEvents().retry(req.params.failedEventId));
+  });
+  routes.delete("/auth/failed-events/:failedEventId", async (req, res) => {
+    await failedEvents().discard(req.params.failedEventId);
+    res.status(204).end();
+  });
+
+  // For notification, to email helpers and families.
+  routes.get("/internal/auth/users", async (req, res) => {
+    res.json(
+      await auth.internalListUsers({
+        role: req.query.role,
+        yaiId: req.query.yaiId,
+      }),
+    );
+  });
+  routes.get("/internal/auth/users/:userId", async (req, res) => {
+    res.json(await auth.internalGetUser(req.params.userId));
+  });
+
   return routes;
 }
 
@@ -113,6 +174,8 @@ export function authRoutes(auth) {
 export function createAuthApp({
   auth,
   verifyToken,
+  internalToken,
+  deadLetters,
   logger,
   ready,
   validateResponses = false,
@@ -120,9 +183,11 @@ export function createAuthApp({
   return createApp({
     service: "auth",
     logger,
-    routes: authRoutes(auth),
-    auth: { verifyToken },
+    routes: authRoutes(auth, deadLetters),
+    auth: { verifyToken, internalToken },
     ready,
     validateResponses,
+    // Auth keeps the audit log, so its own entries go straight in.
+    audit: (entry) => auth.recordAudit(entry),
   });
 }

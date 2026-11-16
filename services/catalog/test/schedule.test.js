@@ -182,6 +182,20 @@ describe("class times", () => {
     expect((await bookable()).body.items.map((t) => t.id)).toEqual([
       draft.body.id,
     ]);
+    expect(
+      ctx.events.of("class_time.helper_assigned").map((e) => e.data),
+    ).toEqual([
+      {
+        classTimeId: draft.body.id,
+        classId: khaoSoi.id,
+        yaiId: somsri.id,
+        helperId,
+        startsAt: time.startsAt,
+        endsAt: inHours(50),
+        dish: "Khao Soi",
+        yaiName: "Yai Somsri",
+      },
+    ]);
 
     const times = await ctx.call("get", `${timesPath()}`, family);
     expect(times.body.items[0].isUsed).toBe(true);
@@ -195,6 +209,72 @@ describe("class times", () => {
       helperId: "6650a1f2c3d4e5f6a7b8c9b1",
     });
     expect(res.body.status).toBe("published");
+    const [event] = ctx.events.of("class_time.helper_assigned");
+    expect(event.data).toMatchObject({
+      classTimeId: res.body.id,
+      helperId: "6650a1f2c3d4e5f6a7b8c9b1",
+    });
+    expect(event.data.previousHelperId).toBeUndefined();
+  });
+
+  it("tells the new helper and the one taken off, and nobody when it doesn't change", async () => {
+    const time = await addTime(48);
+    const first = "6650a1f2c3d4e5f6a7b8c9b1";
+    const second = "6650a1f2c3d4e5f6a7b8c9b2";
+    const created = await makeClassTime({
+      classId: khaoSoi.id,
+      availableTimeId: time.id,
+      helperId: first,
+    });
+    const path = `/catalog/class-times/${created.body.id}`;
+
+    await ctx.call("patch", path).send({ helperId: first });
+    expect(ctx.events.of("class_time.helper_assigned")).toHaveLength(1);
+
+    const res = await ctx.call("patch", path).send({ helperId: second });
+    expect(res.body.helperId).toBe(second);
+    const events = ctx.events.of("class_time.helper_assigned");
+    expect(events).toHaveLength(2);
+    expect(events[1].data).toMatchObject({
+      helperId: second,
+      previousHelperId: first,
+    });
+  });
+
+  it("keeps the old helper when the new one can't be told", async () => {
+    const time = await addTime(48);
+    const first = "6650a1f2c3d4e5f6a7b8c9b1";
+    const created = await makeClassTime({
+      classId: khaoSoi.id,
+      availableTimeId: time.id,
+      helperId: first,
+    });
+    ctx.events.down = true;
+    const res = await ctx
+      .call("patch", `/catalog/class-times/${created.body.id}`)
+      .send({ helperId: "6650a1f2c3d4e5f6a7b8c9b2" });
+    expect(res.status).toBe(503);
+
+    ctx.events.down = false;
+    const [stored] = (await ctx.call("get", "/catalog/class-times")).body.items;
+    expect(stored).toMatchObject({ helperId: first, status: "published" });
+  });
+
+  it("isn't made when its helper can't be told, and the time can be used again", async () => {
+    const time = await addTime(48);
+    const body = {
+      classId: khaoSoi.id,
+      availableTimeId: time.id,
+      helperId: "6650a1f2c3d4e5f6a7b8c9b1",
+    };
+    ctx.events.down = true;
+    expect((await makeClassTime(body)).status).toBe(503);
+    expect((await ctx.call("get", "/catalog/class-times")).body.items).toEqual(
+      [],
+    );
+
+    ctx.events.down = false;
+    expect((await makeClassTime(body)).status).toBe(201);
   });
 
   it("makes one class time from each available time", async () => {
@@ -347,6 +427,10 @@ describe("cancelling a class time", () => {
         classId: khaoSoi.id,
         yaiId: somsri.id,
         startsAt: classTime.startsAt,
+        endsAt: classTime.endsAt,
+        helperId: "6650a1f2c3d4e5f6a7b8c9b1",
+        dish: "Khao Soi",
+        yaiName: "Yai Somsri",
       },
     ]);
     const bookable = await internal(

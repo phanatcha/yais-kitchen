@@ -4,7 +4,10 @@ import { randomUUID } from "node:crypto";
 import { createStore } from "../src/models/store.js";
 import { createBookingApp } from "../src/app.js";
 import { share } from "../src/services/booking.js";
+import { createEventChecker } from "@yais-kitchen/shared";
 import { harness, ids } from "./helpers.js";
+
+const checkEvent = createEventChecker();
 
 describe("booking transactions and API", () => {
   let h, app, api, token;
@@ -418,5 +421,143 @@ describe("booking transactions and API", () => {
     expect(
       (await api.earnings({ yaiId: ids.yai }, { role: "admin" })).total.amount,
     ).toBe(0);
+  });
+  // What booking will send, checked against asyncapi.yaml, because an event
+  // that doesn't match is set aside instead of sent.
+  async function sent(type) {
+    const rows = await h.connection
+      .collection("outbox")
+      .find({ type })
+      .sort({ createdAt: 1 })
+      .toArray();
+    for (const row of rows)
+      checkEvent({
+        id: randomUUID(),
+        type,
+        occurredAt: row.createdAt.toISOString(),
+        version: 1,
+        data: row.data,
+      });
+    return rows.map((row) => row.data);
+  }
+  it("tells the guest when an unpaid booking expires", async () => {
+    const booking = await booked();
+    h.clock.time += 600000;
+    await api.maintenance();
+    await api.maintenance();
+    expect(await sent("booking.expired")).toEqual([
+      expect.objectContaining({
+        bookingId: booking.id,
+        email: "alex@example.test",
+        name: "Alex Test",
+        classId: ids.class,
+        dish: "Curry",
+        yaiName: "Yai Test",
+        guests: 1,
+      }),
+    ]);
+  });
+  it("sends nothing when a hold without a booking runs out", async () => {
+    await hold();
+    h.clock.time += 600000;
+    await api.maintenance();
+    expect(await sent("booking.expired")).toEqual([]);
+  });
+  it("tells the family once when a payout is paid", async () => {
+    const b = await booked();
+    await paid(b);
+    h.clock.time = +new Date(b.endsAt);
+    await api.handlers["live_class.ended"](
+      event("live_class.ended", { classTimeId: ids.time }),
+    );
+    const payout = await api.payout({
+      yaiId: ids.yai,
+      periodStart: "2027-01-04",
+      periodEnd: "2027-01-10",
+    });
+    await api.markPaid(payout.id, "PP-1");
+    await api.markPaid(payout.id, "PP-2");
+    expect(await sent("payout.paid")).toEqual([
+      {
+        payoutId: payout.id,
+        yaiId: ids.yai,
+        yaiName: "Yai Test",
+        periodStart: "2027-01-04",
+        periodEnd: "2027-01-10",
+        amount: { amount: 67500, currency: "THB" },
+        bookings: 1,
+        reference: "PP-1",
+        paidAt: new Date(h.clock.time).toISOString(),
+      },
+    ]);
+    await expect(api.markPaid(ids.other, "PP-3")).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+  it("forgets a deleted account's details but keeps the money records", async () => {
+    const held = await hold(2);
+    const b = await api.create(held.id, h.user, {
+      language: "ja",
+      allergies: "Peanuts",
+      cookingExperience: "new",
+    });
+    await api.checklist(b.id, ["rice"], h.user);
+    const other = await api.create((await hold()).id, {
+      ...h.user,
+      id: ids.other,
+      name: "Kim Other",
+      email: "kim@example.test",
+    });
+    await paid(b);
+    h.clock.time = +new Date(b.endsAt);
+    await api.handlers["live_class.ended"](
+      event("live_class.ended", { classTimeId: ids.time }),
+    );
+    await api.rate(b.id, { stars: 5, comment: "Loved it, Alex" }, h.user);
+
+    const deleted = event("user.deleted", { userId: ids.user });
+    await api.handlers["user.deleted"](deleted);
+    await api.handlers["user.deleted"](deleted);
+
+    const stored = await h.store.Booking.findById(b.id).lean();
+    expect(stored).toMatchObject({
+      guestName: "Guest",
+      checkedIngredientIds: [],
+      status: "completed",
+      total: b.total,
+      paymentId: ids.other,
+    });
+    for (const field of [
+      "email",
+      "guestSessionId",
+      "allergies",
+      "language",
+      "cookingExperience",
+    ])
+      expect(stored[field], field).toBeUndefined();
+    const rating = await h.store.Rating.findOne({ bookingId: b.id }).lean();
+    expect(rating.stars).toBe(5);
+    expect(rating.comment).toBeUndefined();
+    expect(await h.store.Booking.findById(other.id).lean()).toMatchObject({
+      email: "kim@example.test",
+      guestName: "Kim Other",
+    });
+    // Still valid for every reader, with no name or email to give away.
+    const view = await api.get(b.id, { role: "admin" });
+    expect(view.guestName).toBe("Guest");
+    expect(JSON.stringify(view)).not.toContain("alex@example.test");
+  });
+  it("still sends valid events for a booking whose account was deleted", async () => {
+    const b = await booked();
+    await api.handlers["user.deleted"](
+      event("user.deleted", { userId: ids.user }),
+    );
+    await paid(b);
+    await api.cancel(b.id, { role: "admin" });
+    const [confirmed] = await sent("booking.confirmed");
+    const [cancelled] = await sent("booking.cancelled");
+    expect(confirmed.email).toBeUndefined();
+    expect(cancelled).toMatchObject({ name: "Guest", refund: b.total });
+    expect(cancelled.email).toBeUndefined();
   });
 });

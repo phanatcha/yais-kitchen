@@ -1,5 +1,6 @@
 import {
   connectEvents,
+  createDurable,
   createLogger,
   createTokenVerifier,
   loadConfig,
@@ -39,6 +40,23 @@ const events = await connectEvents({
   logger,
 });
 
+// Audit entries wait in the outbox until RabbitMQ has them, so none is lost
+// while the broker is down.
+const durable = createDurable(connection);
+let flushing;
+const flush = () => {
+  flushing ??= durable
+    .flush(events)
+    .catch((error) =>
+      logger.warn({ err: error }, "could not send the outbox; trying again"),
+    )
+    .finally(() => {
+      flushing = undefined;
+    });
+};
+const flushTimer = setInterval(flush, 1000);
+flushTimer.unref();
+
 const app = createCatalogApp({
   store,
   events,
@@ -46,6 +64,7 @@ const app = createCatalogApp({
   verifyToken: await createTokenVerifier(config.AUTH_PUBLIC_KEY),
   internalToken: config.INTERNAL_TOKEN,
   logger,
+  audit: (entry) => durable.enqueue(undefined, "audit.recorded", entry),
   ready: {
     database: () => connection.readyState === 1,
     events: events.isReady,
@@ -57,6 +76,8 @@ await startService({
   port: config.PORT,
   logger,
   async onStop() {
+    clearInterval(flushTimer);
+    await flushing;
     await events.close();
     await connection.close();
   },

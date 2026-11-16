@@ -18,7 +18,8 @@ export function createReminders({
 }) {
   async function sendOne(reminder) {
     const booking = await store.findBooking(reminder.bookingId);
-    if (booking?.status !== "confirmed") {
+    // Cancelled, or the account was deleted and there's no email any more.
+    if (booking?.status !== "confirmed" || !booking.email) {
       await store.finishReminder(reminder._id, "cancelled");
       return;
     }

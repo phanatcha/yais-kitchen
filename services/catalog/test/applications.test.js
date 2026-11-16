@@ -132,3 +132,26 @@ describe("moving an application along", () => {
     ).toBe(404);
   });
 });
+
+describe("deleting an application", () => {
+  const remove = (id, auth) =>
+    ctx.call("delete", `/catalog/applications/${id}`, auth);
+
+  it("deletes everything the family sent", async () => {
+    const { id } = (await submit()).body;
+
+    expect((await remove(id)).status).toBe(204);
+    expect(await db.store.Application.findById(id)).toBeNull();
+    expect((await ctx.call("get", "/catalog/applications")).body.items).toEqual(
+      [],
+    );
+    expect((await remove(id)).status).toBe(404);
+  });
+
+  it("is for Admin only", async () => {
+    const { id } = (await submit()).body;
+    expect((await remove(id, await ctx.as("family"))).status).toBe(403);
+    expect((await remove(id, null)).status).toBe(401);
+    expect(await db.store.Application.findById(id)).not.toBeNull();
+  });
+});

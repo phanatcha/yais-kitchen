@@ -3,6 +3,7 @@ import {
   createEventChecker,
   createLogger,
   createTokenVerifier,
+  notFound,
   serviceUnavailable,
 } from "@yais-kitchen/shared";
 import mongoose from "mongoose";
@@ -64,11 +65,45 @@ export function fakeEvents() {
   return events;
 }
 
+export const INTERNAL_TOKEN = "internal-token-for-tests-0123456789abcdef";
+
+/** Stands in for the dead-letter queue. `waiting` are views of failed events. */
+export function fakeDeadLetters(waiting = []) {
+  const notWaiting = () =>
+    notFound("That failed event isn't waiting any more.");
+  const dead = {
+    waiting,
+    retried: [],
+    discarded: [],
+    async list({ limit }) {
+      return {
+        items: dead.waiting.slice(0, limit),
+        total: dead.waiting.length,
+      };
+    },
+    async retry(id) {
+      const found = dead.waiting.find((item) => item.id === id);
+      if (!found) throw notWaiting();
+      dead.waiting = dead.waiting.filter((item) => item !== found);
+      dead.retried.push(id);
+      return found;
+    },
+    async discard(id) {
+      const found = dead.waiting.find((item) => item.id === id);
+      if (!found) throw notWaiting();
+      dead.waiting = dead.waiting.filter((item) => item !== found);
+      dead.discarded.push(id);
+      return found;
+    },
+  };
+  return dead;
+}
+
 /**
  * The auth app on a test database, with a clock the test can move and a
  * fresh key pair.
  */
-export async function startAuth(store) {
+export async function startAuth(store, { deadLetters } = {}) {
   const privateKey = generateKeyPairSync("ed25519")
     .privateKey.export({ type: "pkcs8", format: "pem" })
     .toString();
@@ -87,10 +122,12 @@ export async function startAuth(store) {
   const app = createAuthApp({
     auth,
     verifyToken,
+    internalToken: INTERNAL_TOKEN,
+    deadLetters,
     logger,
     validateResponses: true,
   });
-  return { app, clock, events, verifyToken };
+  return { app, auth, clock, events, verifyToken };
 }
 
 /** The refresh token a response set, or null when it set none. */

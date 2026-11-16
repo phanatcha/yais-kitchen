@@ -56,6 +56,30 @@ export function createSchedule({
     return doc;
   }
 
+  /** The dish and Yai's name, so the helper's email can say which class. */
+  async function describe(classTime) {
+    const theClass = await Class.findById(classTime.classId).lean();
+    const yai = theClass && (await Yai.findById(theClass.yaiId).lean());
+    return {
+      ...(theClass && { dish: theClass.dish }),
+      ...(yai && { yaiName: yai.name }),
+    };
+  }
+
+  /** Notification emails the new helper, and the one taken off if any. */
+  async function tellHelpers(classTime, previousHelperId) {
+    await events.publish("class_time.helper_assigned", {
+      classTimeId: classTime._id.toString(),
+      classId: classTime.classId.toString(),
+      yaiId: classTime.yaiId.toString(),
+      helperId: classTime.helperId,
+      ...(previousHelperId && { previousHelperId }),
+      startsAt: classTime.startsAt.toISOString(),
+      endsAt: classTime.endsAt.toISOString(),
+      ...(await describe(classTime)),
+    });
+  }
+
   return {
     async listAvailableTimes(yaiId, { from, to, limit, cursor }, viewer) {
       checkYaiAccess(viewer, yaiId);
@@ -179,6 +203,7 @@ export function createSchedule({
       if (claimed.modifiedCount !== 1) {
         throw conflict("time_in_use", "This time already has a class time.");
       }
+      let created = false;
       try {
         const doc = await ClassTime.create({
           _id: id,
@@ -191,8 +216,12 @@ export function createSchedule({
           helperId: helperId ?? null,
           status: helperId ? "published" : "draft",
         });
+        created = true;
+        if (helperId) await tellHelpers(doc.toObject());
         return views.classTime(doc.toObject());
       } catch (error) {
+        // The helper wasn't told, so the class time isn't kept. Admin tries again.
+        if (created) await ClassTime.deleteOne({ _id: id });
         await AvailableTime.updateOne(
           { _id: time._id, classTimeId: id },
           { $set: { classTimeId: null } },
@@ -220,6 +249,9 @@ export function createSchedule({
       }
 
       if (helperId) {
+        if (helperId === doc.helperId && doc.status === "published") {
+          return views.classTime(doc);
+        }
         const updated = await ClassTime.findOneAndUpdate(
           { _id: doc._id, status: { $ne: "cancelled" } },
           { $set: { helperId, status: "published" } },
@@ -231,8 +263,20 @@ export function createSchedule({
             "This class time was cancelled.",
           );
         }
+        try {
+          await tellHelpers(updated, doc.helperId ?? undefined);
+        } catch (error) {
+          // Nobody was told, so the helper doesn't change. Admin tries again.
+          await ClassTime.updateOne(
+            { _id: doc._id, helperId },
+            { $set: { helperId: doc.helperId ?? null, status: doc.status } },
+          );
+          throw error;
+        }
         return views.classTime(updated);
       }
+
+      const about = await describe(doc);
 
       const before = await ClassTime.findOneAndUpdate(
         { _id: doc._id, status: { $ne: "cancelled" } },
@@ -241,12 +285,16 @@ export function createSchedule({
       );
       if (!before) return views.classTime(await findClassTime(id));
       try {
-        // Booking cancels and refunds every booking for it.
+        // Booking cancels and refunds every booking for it. Notification
+        // tells the helper.
         await events.publish("class_time.cancelled", {
           classTimeId: doc._id.toString(),
           classId: doc.classId.toString(),
           yaiId: doc.yaiId.toString(),
           startsAt: doc.startsAt.toISOString(),
+          endsAt: doc.endsAt.toISOString(),
+          ...(before.helperId && { helperId: before.helperId }),
+          ...about,
         });
       } catch (error) {
         // Nobody was told, so it isn't cancelled. Admin tries again.

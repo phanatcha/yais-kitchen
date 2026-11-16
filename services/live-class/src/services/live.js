@@ -380,6 +380,23 @@ export function createLiveService({
       return { received: true };
     },
     handlers: {
+      // The account is gone, so its recording consents go too. A consent
+      // in a class still running is cleared, which stops any recording
+      // until everyone there agrees again.
+      "user.deleted": (event) =>
+        d.receive(event, async (session) => {
+          const theirs = new RegExp(`-${event.data.userId}$`);
+          await Session.updateMany(
+            { "consentAudit.identity": theirs },
+            { $pull: { consentAudit: { identity: theirs } } },
+            { session },
+          );
+          await Session.updateMany(
+            { "participants.identity": theirs },
+            { $unset: { "participants.$[p].consent": "" } },
+            { session, arrayFilters: [{ "p.identity": theirs }] },
+          );
+        }),
       "live_class.state.changed": (event) =>
         d.receive(event, async () => {
           await provider.broadcast(

@@ -6,6 +6,7 @@ export function createDurable(connection) {
   const collection = (name) => connection.collection(name);
   const outbox = collection("outbox");
   const inbox = collection("inbox");
+  const failed = collection("outbox_failed");
   return {
     async transaction(work) {
       return connection.transaction(work);
@@ -41,12 +42,23 @@ export function createDurable(connection) {
     async flush(events) {
       // Stable envelope IDs are preserved across ambiguous broker failures.
       for await (const row of outbox.find({}).sort({ createdAt: 1, _id: 1 })) {
-        await logContext.run({ requestId: row.requestId }, () =>
-          events.publish(row.type, row.data, {
-            id: row._id,
-            occurredAt: row.createdAt.toISOString(),
-          }),
-        );
+        try {
+          await logContext.run({ requestId: row.requestId }, () =>
+            events.publish(row.type, row.data, {
+              id: row._id,
+              occurredAt: row.createdAt.toISOString(),
+            }),
+          );
+        } catch (error) {
+          // An event that doesn't match asyncapi.yaml never will, so it is
+          // set aside for a person instead of holding up every later one.
+          if (error?.retryable !== false) throw error;
+          await failed.insertOne({
+            ...row,
+            error: String(error.message).slice(0, 500),
+            failedAt: new Date(),
+          });
+        }
         await outbox.deleteOne({ _id: row._id });
       }
     },

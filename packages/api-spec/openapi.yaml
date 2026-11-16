@@ -17,6 +17,9 @@ info:
     - `x-roles` lists who may call an operation. Operations with
       `security: []` are public.
     - `x-requirements` names the requirements an operation serves.
+    - Every change an admin, helper or family member makes goes in the audit
+      log (`GET /auth/audit-log`), except operations marked `x-audit: false`,
+      which happen many times a class and change nothing an admin manages.
     - Paths under `/internal` are for calls between services. The gateway
       never forwards them.
     - Changes are additive. A breaking change needs a new path.
@@ -89,7 +92,8 @@ paths:
         Returns a 15-minute access token and sets the refresh token in an
         httpOnly cookie. Each code works once. Five wrong codes in a row lock
         that code. A 401 says why in `code`: `wrong_code`, `code_expired`
-        or `code_locked`. For the last two, ask for a new code.
+        or `code_locked`. For the last two, ask for a new code. An account
+        Admin turned off gets 403 `account_disabled`.
       security: []
       x-roles: []
       x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
@@ -113,6 +117,7 @@ paths:
           $ref: "#/components/responses/SessionWithCookie"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
@@ -166,7 +171,8 @@ paths:
         account. The token and the answer carry the name given here, so
         nobody learns the name saved on an existing account. An email that
         belongs to a family, helper or admin account gets 409
-        `sign_in_needed`: they sign in with a code instead.
+        `sign_in_needed`: they sign in with a code instead. An account Admin
+        turned off gets 403 `account_disabled`.
       security: []
       x-roles: []
       x-rate-limit: { windowSeconds: 900, max: 10, key: ip }
@@ -189,6 +195,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Session" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "429":
           $ref: "#/components/responses/TooManyRequests"
@@ -283,6 +290,165 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/Id" }
+    patch:
+      tags: [Auth]
+      operationId: updateUser
+      summary: Change someone's name or role, or turn the account off or on
+      description: |
+        A family account needs `yaiId`, and only a family account may have
+        one. Changing the role or Yai, or turning the account off
+        (`disabled: true`), ends every session the person has, so they sign
+        in again. An access token already given out keeps working until it
+        runs out, at most 15 minutes. A turned-off account can't sign in or
+        check out until it is turned back on. Nobody can change their own
+        role or turn off their own account: 409 `own_account`.
+      x-roles: [admin]
+      x-requirements: [FR-28, FR-34]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: { $ref: "#/components/schemas/PersonName" }
+                role: { $ref: "#/components/schemas/AccountRole" }
+                yaiId: { $ref: "#/components/schemas/Id" }
+                disabled: { type: boolean }
+      responses:
+        "200":
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/audit-log:
+    get:
+      tags: [Auth]
+      operationId: listAuditLog
+      summary: Who changed what, newest first
+      description: |
+        Every change an admin, helper or family member made through the API,
+        from every service: what they called, on what, and the fields they
+        sent. Sign-in codes, tokens and card details are hidden. Entries
+        reach the log within a few seconds and are kept for two years.
+      x-roles: [admin]
+      x-requirements: [audit]
+      parameters:
+        - name: service
+          in: query
+          schema:
+            type: string
+            enum: [auth, catalog, booking, payment, live-class]
+        - name: actorId
+          in: query
+          description: Only changes made by this person.
+          schema: { $ref: "#/components/schemas/Id" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses:
+        "200":
+          description: One page of the log.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /auth/failed-events:
+    get:
+      tags: [Auth]
+      operationId: listFailedEvents
+      summary: Events that failed 5 times, oldest first
+      description: |
+        The events waiting in the `yais.events.dead` queue, with the error
+        that stopped each one. Sign-in codes and other secrets in `data` are
+        hidden. Fix the cause, then retry each event, or throw it away.
+      x-roles: [admin]
+      x-requirements: [operations]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: The failed events.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FailedEventList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503":
+          description: RabbitMQ can't be reached right now. Try again in a minute.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/failed-events/{failedEventId}:
+    parameters:
+      - { $ref: "#/components/parameters/FailedEventId" }
+    delete:
+      tags: [Auth]
+      operationId: discardFailedEvent
+      summary: Throw a failed event away for good
+      x-roles: [admin]
+      x-requirements: [operations]
+      responses:
+        "204":
+          description: Thrown away.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: RabbitMQ can't be reached right now. Try again in a minute.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/failed-events/{failedEventId}/retry:
+    parameters:
+      - { $ref: "#/components/parameters/FailedEventId" }
+    post:
+      tags: [Auth]
+      operationId: retryFailedEvent
+      summary: Send a failed event back to the service it failed in
+      description: |
+        The event goes back to the queue it failed in and starts again from
+        its first try. Services skip an event they already handled, so a
+        retry is safe. An event that fails again comes back here.
+      x-roles: [admin]
+      x-requirements: [operations]
+      responses:
+        "200":
+          description: Sent back. This is the event as it was.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FailedEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503":
+          description: RabbitMQ can't be reached right now. Try again in a minute.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   # ------------------------------------------------------------- catalog
   /catalog/yais:
@@ -857,6 +1023,19 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Catalog]
+      operationId: deleteApplication
+      summary: Delete an application and everything the family sent
+      description: For spam, or when the family asks us to forget them.
+      x-roles: [admin]
+      x-requirements: [FR-29, privacy]
+      responses:
+        "204":
+          description: Deleted.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ------------------------------------------------------------- booking
   /booking/class-times:
@@ -2031,6 +2210,7 @@ paths:
     post:
       tags: [Live class]
       operationId: joinClass
+      x-audit: false
       summary: Get a ticket into the video call
       description: |
         Opens 10 minutes before class starts. Allowed for tourists with a
@@ -2142,6 +2322,7 @@ paths:
     put:
       tags: [Live class]
       operationId: setStep
+      x-audit: false
       summary: Move the recipe to a step
       description: Every screen in the call shows the new step at once.
       x-roles:
@@ -2212,6 +2393,7 @@ paths:
     post:
       tags: [Live class]
       operationId: giveRecordingConsent
+      x-audit: false
       summary: Agree or refuse to be recorded
       x-roles:
         - tourist
@@ -2612,6 +2794,63 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ------------------------------------------------------------ internal
+  /internal/auth/users:
+    get:
+      tags: [Internal]
+      operationId: internalListUsers
+      summary: Accounts with one role, such as a Yai's family (used by notification)
+      description: Turned-off accounts are left out. At most 100.
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-36]
+      parameters:
+        - name: role
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/AccountRole" }
+        - name: yaiId
+          in: query
+          schema: { $ref: "#/components/schemas/Id" }
+      responses:
+        "200":
+          description: The accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items: { $ref: "#/components/schemas/InternalUser" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /internal/auth/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/Id" }
+    get:
+      tags: [Internal]
+      operationId: internalGetUser
+      summary: One account, to email that person (used by notification)
+      security:
+        - internalToken: []
+      x-roles: []
+      x-requirements: [FR-28]
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InternalUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /internal/catalog/class-times:
     get:
       tags: [Internal]
@@ -3103,6 +3342,7 @@ paths:
       - $ref: "#/components/parameters/ClassTimeId"
     post:
       operationId: submitCaption
+      x-audit: false
       summary: submit Caption
       tags:
         - Live class
@@ -3346,6 +3586,12 @@ components:
       description: Shared secret between services. Never sent by the web app.
 
   parameters:
+    FailedEventId:
+      name: failedEventId
+      in: path
+      required: true
+      description: The `id` from the list of failed events.
+      schema: { type: string, pattern: "^[a-f0-9]{32}$" }
     Limit:
       name: limit
       in: query
@@ -3583,6 +3829,90 @@ components:
           description: Family accounts only.
           $ref: "#/components/schemas/Id"
         createdAt: { $ref: "#/components/schemas/DateTime" }
+        disabledAt:
+          description: When Admin turned the account off. Missing while it is on.
+          $ref: "#/components/schemas/DateTime"
+    InternalUser:
+      type: object
+      required: [id, email, name, role, disabled]
+      properties:
+        id: { $ref: "#/components/schemas/Id" }
+        email: { $ref: "#/components/schemas/Email" }
+        name: { $ref: "#/components/schemas/PersonName" }
+        role: { $ref: "#/components/schemas/AccountRole" }
+        yaiId: { $ref: "#/components/schemas/Id" }
+        disabled: { type: boolean }
+    AuditEntry:
+      type: object
+      required:
+        [id, service, action, method, path, target, status, actor, changes, at]
+      properties:
+        id: { type: string }
+        service: { type: string, examples: [catalog] }
+        action:
+          type: string
+          description: The `operationId` that was called.
+          examples: [updateClassTime]
+        method: { type: string, enum: [POST, PUT, PATCH, DELETE] }
+        path:
+          type: string
+          examples: ["/catalog/class-times/6650a1f2c3d4e5f6a7b8c9d0"]
+        target:
+          type: object
+          description: The path parameters, which name what was changed.
+          additionalProperties: { type: string }
+        status: { type: integer }
+        actor:
+          type: object
+          required: [id, role]
+          properties:
+            id: { type: string }
+            role: { type: string, enum: [family, helper, admin] }
+            name: { type: string }
+            email: { type: string }
+        changes:
+          type: object
+          description: The fields sent, cut short. Secrets show as `[hidden]`.
+        requestId: { type: string }
+        at: { $ref: "#/components/schemas/DateTime" }
+    AuditPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditEntry" }
+        nextCursor: { $ref: "#/components/schemas/NextCursor" }
+    FailedEvent:
+      type: object
+      required:
+        [id, eventId, type, queue, error, attempts, occurredAt, failedAt, data]
+      properties:
+        id: { type: string, pattern: "^[a-f0-9]{32}$" }
+        eventId: { type: [string, "null"] }
+        type: { type: [string, "null"], examples: [booking.confirmed] }
+        queue:
+          type: [string, "null"]
+          description: The service queue it failed in.
+          examples: [notification]
+        error:
+          type: string
+          examples: ["Auth answered 503."]
+        attempts: { type: [integer, "null"], examples: [5] }
+        occurredAt: { type: [string, "null"], format: date-time }
+        failedAt: { type: [string, "null"], format: date-time }
+        data: { type: [object, "null"] }
+    FailedEventList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          maxItems: 200
+          items: { $ref: "#/components/schemas/FailedEvent" }
+        total:
+          type: integer
+          description: How many are waiting, which may be more than listed.
     UserPage:
       type: object
       required: [items, nextCursor]

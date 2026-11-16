@@ -20,7 +20,7 @@ import { createLinks } from "../src/links.js";
 import { createMailer } from "../src/mailer.js";
 import { createNotification } from "../src/notification.js";
 import { createStore } from "../src/store.js";
-import { fakeCatalog } from "./helpers.js";
+import { fakeAuth, fakeCatalog } from "./helpers.js";
 
 const { RABBITMQ_URL, MONGO_URL, MAILPIT_URL } = process.env;
 const run = randomUUID().slice(0, 8);
@@ -80,6 +80,7 @@ describe.skipIf(!RABBITMQ_URL || !MONGO_URL || !MAILPIT_URL)(
         store,
         mailer,
         catalog: fakeCatalog(SAMPLE_CLASS_TIME),
+        auth: fakeAuth(),
         links: createLinks("http://localhost:5173"),
         adminEmail: address("admin"),
         logger,

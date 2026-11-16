@@ -3,13 +3,14 @@ import * as emails from "./emails.js";
 import { createReminders } from "./reminders.js";
 
 /**
- * The event handlers and the reminder sender, wired to their store, mailer
- * and catalog. server.js passes the real ones, tests pass fakes.
+ * The event handlers and the reminder sender, wired to their store, mailer,
+ * catalog and auth. server.js passes the real ones, tests pass fakes.
  */
 export function createNotification({
   store,
   mailer,
   catalog,
+  auth,
   links,
   adminEmail,
   logger,
@@ -68,6 +69,36 @@ export function createNotification({
     }
   }
 
+  /**
+   * Emails a helper about a class time. Their address comes from auth. An
+   * account that is gone or turned off isn't emailed.
+   */
+  async function emailHelper(key, helperId, template, build) {
+    const helper = await auth.getUser(helperId);
+    if (!helper || helper.disabled) {
+      logger.info({ template }, "this helper can't be emailed; skipping it");
+      return;
+    }
+    await sendOnce(key, {
+      to: helper.email,
+      userId: helper.id,
+      template,
+      content: build({ helperName: helper.name, link: links.helperClasses() }),
+    });
+  }
+
+  /** Emails each family member of one Yai. */
+  async function emailFamilies(id, yaiId, template, build) {
+    for (const family of await auth.familiesOf(yaiId)) {
+      await sendOnce(`${id}:${template}:${family.id}`, {
+        to: family.email,
+        userId: family.id,
+        template,
+        content: build({ familyName: family.name }),
+      });
+    }
+  }
+
   // One handler per event notification receives in asyncapi.yaml.
   const handlers = {
     async "auth.code_requested"({ id, data }) {
@@ -109,21 +140,82 @@ export function createNotification({
         );
         return;
       }
-      const reminders = await store.planReminders(booking);
-      await sendOnce(`${id}:booking_confirmed`, {
-        to: booking.email,
-        userId: booking.userId,
-        template: "booking_confirmed",
-        content: emails.bookingConfirmed({
-          ...booking,
-          reminders,
-          link: links.getReady(booking._id),
+      // A booking whose account was deleted has no email to send to.
+      if (booking.email) {
+        const reminders = await store.planReminders(booking);
+        await sendOnce(`${id}:booking_confirmed`, {
+          to: booking.email,
+          userId: booking.userId,
+          template: "booking_confirmed",
+          content: emails.bookingConfirmed({
+            ...booking,
+            reminders,
+            link: links.getReady(booking._id),
+          }),
+        });
+      }
+      await emailFamilies(id, data.yaiId, "family_booked", (family) =>
+        emails.familyBooked({
+          ...data,
+          ...family,
+          link: links.familyBookings(),
+        }),
+      );
+    },
+
+    async "booking.expired"({ id, data }) {
+      if (!data.email) return;
+      await sendOnce(`${id}:booking_expired`, {
+        to: data.email,
+        userId: data.userId,
+        template: "booking_expired",
+        content: emails.bookingExpired({
+          ...data,
+          link: links.bookAgain(data.classId),
         }),
       });
     },
 
+    async "class_time.helper_assigned"({ id, data }) {
+      await emailHelper(
+        `${id}:helper_assigned`,
+        data.helperId,
+        "helper_assigned",
+        (helper) => emails.helperAssigned({ ...data, ...helper }),
+      );
+      if (data.previousHelperId && data.previousHelperId !== data.helperId) {
+        await emailHelper(
+          `${id}:helper_removed`,
+          data.previousHelperId,
+          "helper_removed",
+          (helper) => emails.helperRemoved({ ...data, ...helper }),
+        );
+      }
+    },
+
+    async "class_time.cancelled"({ id, data }) {
+      if (!data.helperId) return;
+      await emailHelper(
+        `${id}:class_cancelled_helper`,
+        data.helperId,
+        "class_cancelled_helper",
+        (helper) => emails.classCancelledForHelper({ ...data, ...helper }),
+      );
+    },
+
+    async "payout.paid"({ id, data }) {
+      await emailFamilies(id, data.yaiId, "family_paid", (family) =>
+        emails.familyPaid({
+          ...data,
+          ...family,
+          link: links.familyEarnings(),
+        }),
+      );
+    },
+
     async "booking.cancelled"({ id, data }) {
       const booking = await store.cancelBooking(data);
+      if (!data.email) return;
       await sendOnce(`${id}:booking_cancelled`, {
         to: data.email,
         userId: data.userId,
@@ -136,6 +228,7 @@ export function createNotification({
       const booking = await store.findBooking(data.bookingId);
       // booking.cancelled always comes first, but it may still be on its way.
       if (!booking) throw new Error("No booking is known for this refund yet.");
+      if (!booking.email) return;
       await sendOnce(`${id}:payment_refunded`, {
         to: booking.email,
         userId: booking.userId,
@@ -148,6 +241,7 @@ export function createNotification({
       for (const booking of await store.confirmedBookingsFor(
         data.classTimeId,
       )) {
+        if (!booking.email) continue;
         await sendOnce(`${id}:after_class:${booking._id}`, {
           to: booking.email,
           userId: booking.userId,
@@ -164,6 +258,7 @@ export function createNotification({
       for (const booking of await store.confirmedBookingsFor(
         data.classTimeId,
       )) {
+        if (!booking.email) continue;
         await sendOnce(`${id}:recording_ready:${booking._id}`, {
           to: booking.email,
           userId: booking.userId,

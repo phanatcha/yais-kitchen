@@ -4,19 +4,26 @@ Sends every email the product sends. It has no API of its own: it listens for ev
 
 ## Emails
 
-| Event                  | Email                                                                     | To                                       |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
-| `auth.code_requested`  | The sign-in code. Skipped if the code ran out before it could go.         | The person signing in                    |
-| `application.received` | "We got the application", and a note for Admin with a link to it          | The family, and `ADMIN_EMAIL`            |
-| `booking.confirmed`    | The booking with the shopping list. Plans the reminders.                  | The tourist                              |
-| (timer)                | "See you soon" 24 hours before class, "Starting in 1 hour" an hour before | The tourist                              |
-| `booking.cancelled`    | Why it was cancelled and what comes back. Cancels the reminders.          | The tourist                              |
-| `payment.refunded`     | The refund is on its way                                                  | The tourist                              |
-| `live_class.ended`     | Thank you, with a link to After Class                                     | Every tourist still booked on that class |
-| `recording.ready`      | The recording is ready, and until when                                    | Every tourist still booked on that class |
-| `user.deleted`         | No email. Forgets that person's bookings, reminders and email log.        |                                          |
+| Event                        | Email                                                                     | To                                       |
+| ---------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| `auth.code_requested`        | The sign-in code. Skipped if the code ran out before it could go.         | The person signing in                    |
+| `application.received`       | "We got the application", and a note for Admin with a link to it          | The family, and `ADMIN_EMAIL`            |
+| `booking.confirmed`          | The booking with the shopping list. Plans the reminders.                  | The tourist                              |
+| `booking.confirmed`          | Someone booked, how many guests and when. Never the tourist's name.       | The Yai's family                         |
+| `booking.expired`            | The seats were let go because nobody paid, with a link to book again      | The guest                                |
+| `class_time.helper_assigned` | You're helping with this class, and to the one taken off: you're not      | The helper, and the one before           |
+| `class_time.cancelled`       | The class is cancelled, so you don't need to be there                     | The helper, if it had one                |
+| `payout.paid`                | How much was paid for which classes, with the reference                   | The Yai's family                         |
+| (timer)                      | "See you soon" 24 hours before class, "Starting in 1 hour" an hour before | The tourist                              |
+| `booking.cancelled`          | Why it was cancelled and what comes back. Cancels the reminders.          | The tourist                              |
+| `payment.refunded`           | The refund is on its way                                                  | The tourist                              |
+| `live_class.ended`           | Thank you, with a link to After Class                                     | Every tourist still booked on that class |
+| `recording.ready`            | The recording is ready, and until when                                    | Every tourist still booked on that class |
+| `user.deleted`               | No email. Forgets that person's bookings, reminders and email log.        |                                          |
 
 Dish and ingredient names also appear in Thai script, such as "Khao Soi (ข้าวซอย)", so a tourist can show them at a market. Times are Thai time.
+
+Helpers' and families' addresses come from auth's `GET /internal/auth/users/{userId}` and `GET /internal/auth/users?role=family&yaiId=…`, never from the events. A helper whose account is gone or turned off isn't emailed. If auth can't be reached, the event is tried again, and after 5 tries it waits on the Admin Failed events page. A booking whose account was deleted has no email, so only the family hears about it.
 
 The Thai dish name and the shopping list come from catalog's `GET /internal/catalog/class-times/{classTimeId}`. Without `CATALOG_URL`, the mock server answers. If catalog can't be reached on any of the 5 tries, the booking email goes out without the list, which is also on the Get Ready page.
 
@@ -67,8 +74,9 @@ It sends a sample of every event, and the emails appear at http://localhost:8025
 | `EMAIL_FROM`                 | `Yai's Kitchen <hello@yais-kitchen.local>` | Who emails come from                                   |
 | `ADMIN_EMAIL`                | required                                   | Gets a note for each Become a Yai application          |
 | `WEB_ORIGIN`                 | required                                   | The web app, for links in emails                       |
-| `INTERNAL_TOKEN`             | required                                   | For catalog's internal API                             |
+| `INTERNAL_TOKEN`             | required                                   | For catalog's and auth's internal APIs                 |
 | `CATALOG_URL`                | not set                                    | Catalog. When not set, `MOCK_URL`.                     |
+| `AUTH_URL`                   | `http://127.0.0.1:3001`                    | Auth, to look up helpers and families                  |
 | `MOCK_URL`                   | `http://127.0.0.1:4010`                    | The mock server                                        |
 | `REMINDER_CHECK_MS`          | `30000`                                    | How often to look for due reminders                    |
 | `PORT`                       | `3007`                                     | For `/health` and `/ready`                             |
@@ -81,6 +89,9 @@ It sends a sample of every event, and the emails appear at http://localhost:8025
 - `/my-classes/{bookingId}/ready`
 - `/my-classes/{bookingId}/after`
 - `/admin/applications/{applicationId}`
+- `/classes/{classId}/book`
+- `/helper`
+- `/family/bookings` and `/family/earnings`
 
 ## Tests
 

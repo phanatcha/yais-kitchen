@@ -11,6 +11,19 @@ const id = () => new mongoose.Types.ObjectId().toString();
 export const share = (amount) => Number((BigInt(amount) * 3n) / 4n);
 export const money = (amount) => ({ amount, currency: "THB" });
 const iso = (value) => new Date(value).toISOString();
+// Who to email about a booking. A deleted account's bookings have no email,
+// so the event goes out without one and nobody is emailed.
+const contact = (b) => ({
+  ...(b.email && { email: b.email }),
+  name: b.guestName || "Guest",
+});
+// What a booking's emails say about the class.
+const about = (b) => ({
+  classId: b.class.id,
+  yaiId: b.yaiId,
+  yaiName: b.class.yaiName,
+  dish: b.class.dish,
+});
 
 export function createBookingService({
   store: s,
@@ -143,8 +156,7 @@ export function createBookingService({
     await d.enqueue(session, "booking.cancelled", {
       bookingId: b._id,
       userId: b.userId,
-      email: b.email,
-      name: b.guestName,
+      ...contact(b),
       classTimeId: b.classTimeId,
       startsAt: iso(b.startsAt),
       cancelledBy: by,
@@ -167,11 +179,23 @@ export function createBookingService({
             { released: true },
             { session },
           );
-          await Booking.updateOne(
+          const expired = await Booking.findOneAndUpdate(
             { holdId: h._id, status: "pending_payment" },
             { status: "expired" },
-            { session },
+            { session, lean: true },
           );
+          // Notification tells the guest the seats were let go.
+          if (expired)
+            await d.enqueue(session, "booking.expired", {
+              bookingId: expired._id,
+              userId: expired.userId,
+              ...contact(expired),
+              classTimeId: expired.classTimeId,
+              ...about(expired),
+              startsAt: iso(expired.startsAt),
+              endsAt: iso(expired.endsAt),
+              guests: expired.guests,
+            });
         });
     },
     async availability(query) {
@@ -505,14 +529,33 @@ export function createBookingService({
       });
     },
     async markPaid(payoutId, reference) {
-      let p = await Payout.findOneAndUpdate(
-        { _id: payoutId, status: "due" },
-        { $set: { status: "paid", reference, paidAt: now() } },
-        { returnDocument: "after" },
-      );
-      p ??= await Payout.findById(payoutId);
-      if (!p) throw notFound();
-      return { ...p.toObject(), id: p._id };
+      return d.transaction(async (session) => {
+        const paid = await Payout.findOneAndUpdate(
+          { _id: payoutId, status: "due" },
+          { $set: { status: "paid", reference, paidAt: now() } },
+          { returnDocument: "after", session },
+        );
+        const p = paid ?? (await Payout.findById(payoutId).session(session));
+        if (!p) throw notFound();
+        // Only the first time, so the family hears about each payout once.
+        if (paid) {
+          const first = await Booking.findById(paid.bookingIds[0])
+            .session(session)
+            .lean();
+          await d.enqueue(session, "payout.paid", {
+            payoutId: paid._id,
+            yaiId: paid.yaiId,
+            ...(first?.class?.yaiName && { yaiName: first.class.yaiName }),
+            periodStart: paid.periodStart,
+            periodEnd: paid.periodEnd,
+            amount: paid.amount,
+            bookings: paid.bookingIds.length,
+            reference: paid.reference,
+            paidAt: iso(paid.paidAt),
+          });
+        }
+        return { ...p.toObject(), id: p._id };
+      });
     },
     handlers: {
       "payment.succeeded": (event) =>
@@ -545,13 +588,9 @@ export function createBookingService({
           await d.enqueue(session, "booking.confirmed", {
             bookingId: b._id,
             userId: b.userId,
-            email: b.email,
-            name: b.guestName,
+            ...contact(b),
             classTimeId: b.classTimeId,
-            classId: b.class.id,
-            yaiId: b.yaiId,
-            yaiName: b.class.yaiName,
-            dish: b.class.dish,
+            ...about(b),
             startsAt: iso(b.startsAt),
             endsAt: iso(b.endsAt),
             guests: b.guests,
@@ -598,6 +637,32 @@ export function createBookingService({
               startsAt: { $lte: now() },
             },
             { status: "completed" },
+            { session },
+          );
+        }),
+      // The account is gone, so its bookings keep only what the money
+      // records need: no name, email, allergies, language, cooking
+      // experience or checklist, and ratings lose their comment.
+      "user.deleted": (event) =>
+        d.receive(event, async (session) => {
+          const { userId } = event.data;
+          await Booking.updateMany(
+            { userId },
+            {
+              $set: { guestName: "Guest", checkedIngredientIds: [] },
+              $unset: {
+                email: "",
+                guestSessionId: "",
+                allergies: "",
+                language: "",
+                cookingExperience: "",
+              },
+            },
+            { session },
+          );
+          await Rating.updateMany(
+            { userId },
+            { $unset: { comment: "" } },
             { session },
           );
         }),

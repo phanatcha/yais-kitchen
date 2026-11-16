@@ -147,6 +147,10 @@ export function catalogRoutes({ catalog, schedule, applications }) {
   routes.patch("/catalog/applications/:applicationId", async (req, res) => {
     res.json(await applications.update(req.params.applicationId, req.body));
   });
+  routes.delete("/catalog/applications/:applicationId", async (req, res) => {
+    await applications.remove(req.params.applicationId);
+    res.status(204).end();
+  });
 
   // For booking, live-class and notification
   routes.get("/internal/catalog/class-times", async (req, res) => {
@@ -173,6 +177,7 @@ export function createCatalogApp({
   logger,
   ready,
   now,
+  audit,
   validateResponses = false,
 }) {
   const views = createViews(mediaPublicUrl);
@@ -188,5 +193,6 @@ export function createCatalogApp({
     auth: { verifyToken, internalToken },
     ready,
     validateResponses,
+    audit,
   });
 }

@@ -10,5 +10,9 @@ export function createLinks(webOrigin) {
     afterClass: (bookingId) => page(`/my-classes/${bookingId}/after`),
     adminApplication: (applicationId) =>
       page(`/admin/applications/${applicationId}`),
+    bookAgain: (classId) => page(`/classes/${classId}/book`),
+    helperClasses: () => page("/helper"),
+    familyBookings: () => page("/family/bookings"),
+    familyEarnings: () => page("/family/earnings"),
   };
 }
