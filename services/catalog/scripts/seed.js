@@ -95,7 +95,7 @@ const SAMPLES = [
         dish: "Som Tam",
         dishThai: "ส้มตำ",
         description: "Green papaya salad, as hot as you can take it.",
-        price: thb(700),
+        price: thb(800),
         durationMinutes: 60,
         maxGuests: 6,
       },

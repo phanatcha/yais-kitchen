@@ -3,6 +3,14 @@ import { api, setAccessToken } from "./api.js";
 
 export const meQueryKey = ["auth", "me"];
 
+/** Each signed-in role's home page and its nav label. Guests have none. */
+export const ACCOUNT_LINKS = {
+  tourist: ["/my-classes", "My classes"],
+  family: ["/family/times", "Family"],
+  helper: ["/helper", "Helper"],
+  admin: ["/admin", "Admin"],
+};
+
 /** POST /auth/codes: emails a 6-digit code. Always 202, even for unknown emails. */
 export function useRequestCode() {
   return useMutation({

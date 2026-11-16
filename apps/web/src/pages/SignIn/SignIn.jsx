@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError } from "../../lib/api.js";
-import { useRequestCode, useSignIn } from "../../lib/auth.js";
+import { ACCOUNT_LINKS, useRequestCode, useSignIn } from "../../lib/auth.js";
 import iconCheck from "../../assets/icon-check.svg";
 import imageMark from "../../assets/image-mark.svg";
 import sparkle from "../../assets/sparkle.svg";
@@ -10,13 +10,6 @@ import styles from "./SignIn.module.css";
 const CODE_LENGTH = 6;
 /** Seconds before "Send a new code" unlocks after a code is sent. */
 const RESEND_SECONDS = 60;
-
-// Where each account lands after signing in, unless it came from a page.
-const HOME_BY_ROLE = {
-  admin: "/admin",
-  helper: "/helper",
-  family: "/family/times",
-};
 
 /** 42 → "0:42" */
 function formatCountdown(seconds) {
@@ -85,7 +78,8 @@ export default function SignIn() {
       { email: trimmedEmail, code },
       {
         onSuccess: (session) => {
-          const home = HOME_BY_ROLE[session.user.role] ?? "/my-classes";
+          // Each account lands on its home page, unless it came from a page.
+          const [home] = ACCOUNT_LINKS[session.user.role] ?? ["/my-classes"];
           navigate(location.state?.from ?? home, { replace: true });
         },
       },
