@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import PageTitle from "../../components/PageTitle.jsx";
-import PhotoSlot from "../../components/PhotoSlot.jsx";
+import ClassPhoto from "../../components/ClassPhoto.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import starIcon from "../../assets/icon-star.svg";
 import { ApiError } from "../../lib/api.js";
@@ -119,9 +119,6 @@ export default function MyClasses() {
   return (
     <div className={ui.page}>
       <div className={ui.inner}>
-        {[...upcoming.items, ...past.items].some((b) => b.class.isSample) && (
-          <p className={`${ui.tag} ${styles.tag}`}>Sample classes</p>
-        )}
         <PageTitle main="My" script="classes" className={styles.title} />
         {body}
       </div>
@@ -177,8 +174,9 @@ function Section({ title, query, children }) {
 function Row({ booking, index, tag, tagClass, lines, actions }) {
   return (
     <li className={`${ui.card} ${styles.row}`}>
-      <PhotoSlot
-        label={booking.class.dish}
+      <ClassPhoto
+        classInfo={booking.class}
+        sizes="240px"
         tone={index}
         className={styles.photo}
       />

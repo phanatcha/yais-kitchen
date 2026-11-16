@@ -7,6 +7,10 @@ import zigzag from "../../assets/zigzag-works.svg";
 import ui from "../../styles/ui.module.css";
 import ex from "../../styles/explore.module.css";
 import styles from "./HowItWorks.module.css";
+import kitchenPhoto from "../../assets/photos/yai-in-her-kitchen.webp";
+import laptopPhoto from "../../assets/photos/laptop-on-counter.webp";
+import marketPhoto from "../../assets/photos/thai-market.webp";
+import callPhoto from "../../assets/photos/video-call.webp";
 
 const STEPS = [
   {
@@ -15,6 +19,7 @@ const STEPS = [
       "Read her story, see her recipes and choose the grandmother you want to cook with.",
     ],
     photo: "Yai in her kitchen",
+    image: kitchenPhoto,
     tone: "palm",
   },
   {
@@ -24,6 +29,7 @@ const STEPS = [
       "A class is THB 800–1,200.",
     ],
     photo: "Laptop on a kitchen counter",
+    image: laptopPhoto,
     tone: "pandan",
   },
   {
@@ -32,6 +38,7 @@ const STEPS = [
       "Before the class we tell you what to buy and what you need in your kitchen.",
     ],
     photo: "Fresh ingredients at a Thai market",
+    image: marketPhoto,
     tone: "thaiTea",
   },
   {
@@ -40,6 +47,7 @@ const STEPS = [
       "Your Yai watches you cook and helps in real time. Your helper interprets, so nothing gets lost.",
     ],
     photo: "Cooking along on a video call",
+    image: callPhoto,
     tone: "turmeric",
   },
 ];
@@ -75,6 +83,7 @@ export default function HowItWorks() {
             <li key={step.title} className={styles.step}>
               <PhotoSlot
                 label={step.photo}
+                src={step.image}
                 tone={step.tone}
                 className={styles.photo}
               />

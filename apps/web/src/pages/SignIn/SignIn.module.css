@@ -300,19 +300,17 @@
 }
 
 .photo {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
   aspect-ratio: 660 / 540;
-  padding: 20px;
-  box-sizing: border-box;
+  overflow: hidden;
   border-radius: 28px;
   background: var(--pandan);
 }
 
-.photoLabel {
-  font-size: 14px;
-  line-height: 20px;
+.photoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .caption {

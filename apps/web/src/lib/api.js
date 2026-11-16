@@ -63,7 +63,9 @@ export function withQuery(path, params) {
       search.set(key, String(value));
     }
   }
-  const qs = search.toString();
+  // URLSearchParams writes spaces as "+", which the API's spec check refuses.
+  // A real "+" is already "%2B", so this only changes spaces.
+  const qs = search.toString().replaceAll("+", "%20");
   return qs ? `${path}?${qs}` : path;
 }
 

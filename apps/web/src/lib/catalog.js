@@ -90,6 +90,18 @@ export function useClasses(params = {}) {
   });
 }
 
+/**
+ * A booked class's photo as catalog has it now. A booking keeps the class as
+ * it was when booked, so its own photo can be out of date.
+ */
+export function useCurrentClassPhoto(classInfo) {
+  const { data } = useClasses({ q: classInfo.dish });
+  const now = data?.items.find(
+    (c) => c.dish === classInfo.dish && c.yaiName === classInfo.yaiName,
+  );
+  return now?.photo ?? classInfo.photo;
+}
+
 /** A list that loads more pages with `nextCursor`, for the Browse pages. */
 function usePagedList(path, key, params) {
   return useInfiniteQuery({

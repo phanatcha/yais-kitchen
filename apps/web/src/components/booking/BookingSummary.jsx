@@ -22,6 +22,7 @@ export default function BookingSummary({
       <h2 className={ui.h3}>{title}</h2>
       <PhotoSlot
         label={classInfo.photo?.alt ?? classInfo.dish}
+        photo={classInfo.photo}
         tone="thaiTea"
         className={styles.photo}
       />

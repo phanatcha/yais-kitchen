@@ -7,17 +7,22 @@ import portraitEdge from "../../assets/portrait-edge.svg";
 import portraitRing from "../../assets/portrait-ring.svg";
 import sparkle from "../../assets/sparkle-64.svg";
 import sparkleTurmeric from "../../assets/sparkle-56-turmeric.svg";
+import familyTablePhoto from "../../assets/photos/kitchen/family-table.webp";
+import handsPhoto from "../../assets/photos/kitchen/hands-at-work.webp";
+import homeKitchenPhoto from "../../assets/photos/kitchen/home-kitchen.webp";
 import { regionRecipes, useYai } from "../../lib/catalog.js";
 import { formatTHB } from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
 import ex from "../../styles/explore.module.css";
 import styles from "./YaiProfile.module.css";
 
-// Fill the row of three until the family adds photos of her kitchen.
+// Her first photo is the portrait. Fill the row of three until the family
+// adds photos of her kitchen. Sample Yais get stock photos; a real Yai's
+// empty slots stay labelled, so nobody mistakes stock for her kitchen.
 const KITCHEN_SLOTS = [
-  { alt: "Her home kitchen" },
-  { alt: "Her hands at work" },
-  { alt: "A dish on her family table" },
+  { alt: "Her home kitchen", sample: homeKitchenPhoto },
+  { alt: "Her hands at work", sample: handsPhoto },
+  { alt: "A dish on her family table", sample: familyTablePhoto },
 ];
 const KITCHEN_TONES = ["palm", "pandan", "thaiTea"];
 
@@ -43,7 +48,7 @@ export default function YaiProfile() {
 
   const yai = query.data;
   const classes = yai.classes ?? [];
-  const photos = [...(yai.photos ?? []), ...KITCHEN_SLOTS].slice(0, 3);
+  const photos = [...(yai.photos ?? []).slice(1), ...KITCHEN_SLOTS].slice(0, 3);
   // One class goes straight to it; with more, she picks from the list below.
   const bookHref =
     classes.length === 1 ? `/classes/${classes[0].id}` : "#recipes";
@@ -66,6 +71,8 @@ export default function YaiProfile() {
               shape="circle"
               tone="palm"
               label={yai.photo?.alt || `${yai.name} portrait`}
+              photo={yai.photo}
+              sizes="480px"
               className={styles.photo}
             />
           </div>
@@ -79,7 +86,6 @@ export default function YaiProfile() {
               height="64"
             />
             <ul className={ex.tags}>
-              {yai.isSample && <li className={ui.tag}>Sample Yai</li>}
               <li className={ui.tagPandan}>{regionRecipes(yai.region)}</li>
             </ul>
             <h1 className={styles.name}>
@@ -146,6 +152,8 @@ export default function YaiProfile() {
               <li key={p.assetId ?? p.alt}>
                 <PhotoSlot
                   label={p.alt}
+                  photo={p.urls && p}
+                  src={yai.isSample ? p.sample : undefined}
                   tone={KITCHEN_TONES[i]}
                   className={styles.kitchenPhoto}
                 />
