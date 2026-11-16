@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router";
 import imageMark from "../../assets/image-mark.svg";
 import { formatTHB } from "../../lib/format.js";
-import ui from "../../styles/ui.module.css";
 import styles from "./ClassCard.module.css";
 
 /** Photo colours in the order the designs use them. */
@@ -38,9 +37,6 @@ export default function ClassCard({ classInfo: c, index, headingLevel = 3 }) {
           <img src={imageMark} alt="" width="32" height="26" />
           {c.photo?.alt || `${c.dish} photo`}
         </span>
-      )}
-      {c.isSample && (
-        <span className={`${ui.tag} ${styles.sample}`}>Sample</span>
       )}
       <div className={styles.tab}>
         <Heading className={styles.dish}>{c.dish}</Heading>

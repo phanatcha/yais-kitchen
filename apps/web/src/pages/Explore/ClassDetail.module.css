@@ -13,21 +13,13 @@
   background: var(--thai-tea);
 }
 
-.photoLabel {
+/* Fills the banner; the label sits top left until the photo loads. */
+.bannerPhoto {
   position: absolute;
-  top: 26px;
-  left: 28px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.sample {
-  position: absolute;
-  top: 24px;
-  right: 24px;
+  inset: 0;
+  align-items: flex-start;
+  padding: 26px 28px;
+  border-radius: 0;
 }
 
 .tab {

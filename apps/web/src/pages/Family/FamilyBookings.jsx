@@ -1,5 +1,5 @@
 import FamilyPage from "../../components/family/FamilyPage.jsx";
-import PhotoSlot from "../../components/PhotoSlot.jsx";
+import ClassPhoto from "../../components/ClassPhoto.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import { useBookingPages } from "../../lib/booking.js";
 import { formatClassTime } from "../../lib/format.js";
@@ -56,9 +56,8 @@ function BookingList({ yaiId, when, title }) {
             const time = formatClassTime(b.startsAt);
             return (
               <li key={b.id} className={`${ui.card} ${staff.row}`}>
-                <PhotoSlot
-                  label={b.class.dish}
-                  photo={b.class.photo}
+                <ClassPhoto
+                  classInfo={b.class}
                   sizes="160px"
                   tone={i + (when === "past" ? 2 : 0)}
                   className={styles.photo}

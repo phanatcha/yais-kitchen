@@ -29,3 +29,11 @@ this project; nothing else was changed.
 | `stir-fries.webp` | [Wikimedia Commons](<https://commons.wikimedia.org/wiki/File:Ka-phrao_mu_(basil_fried_pork)_with_rice_%26_egg,_Bangkok,_2019-03-31_(1).jpg>), Bitterschoko | CC0                                                       |
 | `salads.webp`     | [Pexels 34699469](https://www.pexels.com/photo/34699469/)                                                                                                  | Pexels License                                            |
 | `desserts.webp`   | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Khaoniao_mamuang_-_2014-10-07_-_001.jpg), @ccfoodtravel                                        | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) |
+
+## Sample Yais' kitchens (`kitchen/`)
+
+| File                 | Source                                                                                                     | Licence                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `home-kitchen.webp`  | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Simple_Thai_kitchen,_private.JPG), User:Mattes | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| `hands-at-work.webp` | [Pexels 5480192](https://www.pexels.com/photo/5480192/)                                                    | Pexels License                                                  |
+| `family-table.webp`  | [Unsplash Ec3-1H0k3qY](https://unsplash.com/photos/Ec3-1H0k3qY), Thavatchai Samui                          | Unsplash License                                                |

@@ -7,6 +7,9 @@ import portraitEdge from "../../assets/portrait-edge.svg";
 import portraitRing from "../../assets/portrait-ring.svg";
 import sparkle from "../../assets/sparkle-64.svg";
 import sparkleTurmeric from "../../assets/sparkle-56-turmeric.svg";
+import familyTablePhoto from "../../assets/photos/kitchen/family-table.webp";
+import handsPhoto from "../../assets/photos/kitchen/hands-at-work.webp";
+import homeKitchenPhoto from "../../assets/photos/kitchen/home-kitchen.webp";
 import { regionRecipes, useYai } from "../../lib/catalog.js";
 import { formatTHB } from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
@@ -14,11 +17,12 @@ import ex from "../../styles/explore.module.css";
 import styles from "./YaiProfile.module.css";
 
 // Her first photo is the portrait. Fill the row of three until the family
-// adds photos of her kitchen.
+// adds photos of her kitchen. Sample Yais get stock photos; a real Yai's
+// empty slots stay labelled, so nobody mistakes stock for her kitchen.
 const KITCHEN_SLOTS = [
-  { alt: "Her home kitchen" },
-  { alt: "Her hands at work" },
-  { alt: "A dish on her family table" },
+  { alt: "Her home kitchen", sample: homeKitchenPhoto },
+  { alt: "Her hands at work", sample: handsPhoto },
+  { alt: "A dish on her family table", sample: familyTablePhoto },
 ];
 const KITCHEN_TONES = ["palm", "pandan", "thaiTea"];
 
@@ -82,7 +86,6 @@ export default function YaiProfile() {
               height="64"
             />
             <ul className={ex.tags}>
-              {yai.isSample && <li className={ui.tag}>Sample Yai</li>}
               <li className={ui.tagPandan}>{regionRecipes(yai.region)}</li>
             </ul>
             <h1 className={styles.name}>
@@ -114,27 +117,6 @@ export default function YaiProfile() {
           </div>
         </div>
       </section>
-
-      {yai.introVideo && (
-        <section className={`${ex.section} ${styles.intro}`}>
-          <div className={ex.inner}>
-            <h2 className={ui.title}>
-              <span className={ui.titleMain}>Meet</span>{" "}
-              <span className={ui.titleScript}>{yai.name}</span>
-            </h2>
-            <video
-              className={styles.introVideo}
-              src={yai.introVideo.url}
-              poster={yai.introVideo.posterUrl}
-              controls
-              playsInline
-              preload="metadata"
-            >
-              Your browser can&apos;t play this video.
-            </video>
-          </div>
-        </section>
-      )}
 
       <section id="recipes" className={`${ex.section} ${styles.recipes}`}>
         <div className={ex.inner}>
@@ -171,6 +153,7 @@ export default function YaiProfile() {
                 <PhotoSlot
                   label={p.alt}
                   photo={p.urls && p}
+                  src={yai.isSample ? p.sample : undefined}
                   tone={KITCHEN_TONES[i]}
                   className={styles.kitchenPhoto}
                 />

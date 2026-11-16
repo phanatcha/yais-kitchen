@@ -58,12 +58,6 @@
   line-height: 20px;
 }
 
-.sample {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-}
-
 /* The cream tab with a rounded top-right corner. */
 .tab {
   position: absolute;

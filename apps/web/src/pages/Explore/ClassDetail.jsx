@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router";
 import PhotoSlot from "../../components/PhotoSlot.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
-import imageMark from "../../assets/image-mark.svg";
 import sparkleCoral from "../../assets/sparkle-20-coral.svg";
 import sparkleCream from "../../assets/sparkle-cream.svg";
 import { useClass } from "../../lib/booking.js";
@@ -49,13 +48,13 @@ export default function ClassDetail() {
       <title>{`${c.dish} with ${c.yaiName} · Yai's Kitchen`}</title>
       <section className={ex.section}>
         <div className={`${ex.inner} ${styles.banner}`}>
-          <span className={styles.photoLabel}>
-            <img src={imageMark} alt="" width="32" height="26" />
-            {c.photo?.alt || `${c.dish} photo`}
-          </span>
-          {c.isSample && (
-            <span className={`${ui.tag} ${styles.sample}`}>Sample class</span>
-          )}
+          <PhotoSlot
+            label={c.photo?.alt || `${c.dish} photo`}
+            photo={c.photo}
+            sizes="(max-width: 1400px) 100vw, 1400px"
+            tone="thaiTea"
+            className={styles.bannerPhoto}
+          />
           <div className={styles.tab}>
             <h1 className={styles.dish}>{c.dish}</h1>
             <p className={styles.subtitle}>
