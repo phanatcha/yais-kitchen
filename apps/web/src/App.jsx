@@ -23,6 +23,7 @@ const devLinks = [
   ["/family/times", "Family times"],
   ["/family/bookings", "Family bookings"],
   ["/family/earnings", "Family earnings"],
+  ["/admin", "Admin"],
 ];
 
 /**

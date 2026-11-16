@@ -11,6 +11,13 @@ const CODE_LENGTH = 6;
 /** Seconds before "Send a new code" unlocks after a code is sent. */
 const RESEND_SECONDS = 60;
 
+// Where each account lands after signing in, unless it came from a page.
+const HOME_BY_ROLE = {
+  admin: "/admin",
+  helper: "/helper",
+  family: "/family/times",
+};
+
 /** 42 → "0:42" */
 function formatCountdown(seconds) {
   const m = Math.floor(seconds / 60);
@@ -77,8 +84,9 @@ export default function SignIn() {
     signIn.mutate(
       { email: trimmedEmail, code },
       {
-        onSuccess: () => {
-          navigate(location.state?.from ?? "/my-classes", { replace: true });
+        onSuccess: (session) => {
+          const home = HOME_BY_ROLE[session.user.role] ?? "/my-classes";
+          navigate(location.state?.from ?? home, { replace: true });
         },
       },
     );

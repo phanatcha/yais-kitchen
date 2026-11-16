@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import App from "./App.jsx";
 import NotFound from "./components/NotFound.jsx";
 import Home from "./pages/Explore/Home.jsx";
@@ -23,6 +23,16 @@ import HelperLive from "./pages/Helper/HelperLive.jsx";
 import FamilyTimes from "./pages/Family/FamilyTimes.jsx";
 import FamilyBookings from "./pages/Family/FamilyBookings.jsx";
 import FamilyEarnings from "./pages/Family/FamilyEarnings.jsx";
+import AdminApplications from "./pages/Admin/AdminApplications.jsx";
+import AdminApplication from "./pages/Admin/AdminApplication.jsx";
+import AdminYais from "./pages/Admin/AdminYais.jsx";
+import AdminYai from "./pages/Admin/AdminYai.jsx";
+import AdminClass from "./pages/Admin/AdminClass.jsx";
+import AdminClassTimes from "./pages/Admin/AdminClassTimes.jsx";
+import AdminAccounts from "./pages/Admin/AdminAccounts.jsx";
+import AdminFaq from "./pages/Admin/AdminFaq.jsx";
+import AdminMoney from "./pages/Admin/AdminMoney.jsx";
+import AdminRatings from "./pages/Admin/AdminRatings.jsx";
 
 // `footer` shows the site footer under the page; `live` hides the nav for
 // the full-screen class.
@@ -78,6 +88,23 @@ export const router = createBrowserRouter([
       { path: "family/times", element: <FamilyTimes /> },
       { path: "family/bookings", element: <FamilyBookings /> },
       { path: "family/earnings", element: <FamilyEarnings /> },
+
+      // Admin. The notification email links to the application page, so
+      // keep it in step with notification's links.js.
+      { path: "admin", element: <Navigate to="/admin/applications" replace /> },
+      { path: "admin/applications", element: <AdminApplications /> },
+      {
+        path: "admin/applications/:applicationId",
+        element: <AdminApplication />,
+      },
+      { path: "admin/yais", element: <AdminYais /> },
+      { path: "admin/yais/:yaiId", element: <AdminYai /> },
+      { path: "admin/classes/:classId", element: <AdminClass /> },
+      { path: "admin/class-times", element: <AdminClassTimes /> },
+      { path: "admin/accounts", element: <AdminAccounts /> },
+      { path: "admin/faq", element: <AdminFaq /> },
+      { path: "admin/money", element: <AdminMoney /> },
+      { path: "admin/ratings", element: <AdminRatings /> },
 
       { path: "*", element: <NotFound /> },
     ],
