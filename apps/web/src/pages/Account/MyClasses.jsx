@@ -5,16 +5,35 @@ import PhotoSlot from "../../components/PhotoSlot.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import starIcon from "../../assets/icon-star.svg";
 import { ApiError } from "../../lib/api.js";
-import { useMe, useSignOut } from "../../lib/auth.js";
-import { useBookings } from "../../lib/booking.js";
+import { useDeleteAccount, useMe, useSignOut } from "../../lib/auth.js";
+import { useBookingPages, useCancelBooking } from "../../lib/booking.js";
 import { readCheckout } from "../../lib/checkout.js";
-import { formatThaiLongDate, formatThaiTime } from "../../lib/format.js";
+import { errorText } from "../../lib/errors.js";
+import {
+  formatTHB,
+  formatThaiLongDate,
+  formatThaiTime,
+} from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./MyClasses.module.css";
 
 const DAY = 24 * 60 * 60 * 1000;
 
 /** "In 2 days", "Tomorrow", "Today" */
+/** What happened to the money of a cancelled booking. */
+function refundLine(booking) {
+  if (booking.status === "refunded" || booking.refundStatus === "succeeded") {
+    return "This class was cancelled and your money was refunded.";
+  }
+  if (booking.refundStatus === "failed") {
+    return "This class was cancelled. Your refund is delayed, and we are looking into it.";
+  }
+  if (booking.refundStatus === "pending") {
+    return "This class was cancelled. Your refund is on its way.";
+  }
+  return "This class was cancelled.";
+}
+
 function countdownLabel(startsAt, now) {
   const days = Math.ceil((new Date(startsAt).getTime() - now) / DAY);
   if (days <= 0) return "Today";
@@ -27,9 +46,10 @@ export default function MyClasses() {
   const me = useMe();
   const signOut = useSignOut();
   const signedIn = me.isSuccess;
-  const upcoming = useBookings({ when: "upcoming" }, { enabled: signedIn });
-  const past = useBookings({ when: "past" }, { enabled: signedIn });
+  const upcoming = useBookingPages({ when: "upcoming" }, { enabled: signedIn });
+  const past = useBookingPages({ when: "past" }, { enabled: signedIn });
   const [now] = useState(() => Date.now());
+  const [deleted, setDeleted] = useState(false);
 
   function handleSignOut() {
     signOut.mutate(undefined, {
@@ -38,7 +58,16 @@ export default function MyClasses() {
   }
 
   let body;
-  if (me.isPending) {
+  if (deleted) {
+    body = (
+      <p className={ui.notice} role="status">
+        Your account is deleted. Thank you for cooking with us.{" "}
+        <Link className={ui.link} to="/">
+          Back to home
+        </Link>
+      </p>
+    );
+  } else if (me.isPending) {
     body = <Loading label="Loading your classes…" />;
   } else if (
     me.isError &&
@@ -80,6 +109,9 @@ export default function MyClasses() {
             <PastRow key={booking.id} booking={booking} index={i + 2} />
           )}
         </Section>
+        {me.data.role === "tourist" && (
+          <DeleteAccount onDeleted={() => setDeleted(true)} />
+        )}
       </>
     );
   }
@@ -87,7 +119,9 @@ export default function MyClasses() {
   return (
     <div className={ui.page}>
       <div className={ui.inner}>
-        <p className={`${ui.tag} ${styles.tag}`}>Prototype: sample classes</p>
+        {[...upcoming.items, ...past.items].some((b) => b.class.isSample) && (
+          <p className={`${ui.tag} ${styles.tag}`}>Sample classes</p>
+        )}
         <PageTitle main="My" script="classes" className={styles.title} />
         {body}
       </div>
@@ -99,7 +133,7 @@ function Section({ title, query, children }) {
   let content;
   if (query.isPending) content = <Loading />;
   else if (query.isError) content = <ErrorNotice error={query.error} />;
-  else if (query.data.items.length === 0) {
+  else if (query.items.length === 0) {
     content = (
       <p className={ui.notice}>
         {title === "Coming up" ? (
@@ -115,7 +149,21 @@ function Section({ title, query, children }) {
       </p>
     );
   } else {
-    content = <ul className={styles.list}>{query.data.items.map(children)}</ul>;
+    content = (
+      <>
+        <ul className={styles.list}>{query.items.map(children)}</ul>
+        {query.hasNextPage && (
+          <button
+            type="button"
+            className={`${ui.outline} ${styles.more}`}
+            onClick={() => query.fetchNextPage()}
+            disabled={query.isFetchingNextPage}
+          >
+            {query.isFetchingNextPage ? "Loading…" : "Show more"}
+          </button>
+        )}
+      </>
+    );
   }
 
   return (
@@ -174,7 +222,9 @@ function UpcomingRow({ booking, index, now }) {
       tagClass={tagClass}
       lines={[
         when,
-        `About ${booking.class.durationMinutes} minutes. A helper interprets for you.`,
+        booking.status === "cancelled"
+          ? refundLine(booking)
+          : `About ${booking.class.durationMinutes} minutes. A helper interprets for you.`,
       ]}
       actions={
         booking.status === "pending_payment" ? (
@@ -197,10 +247,131 @@ function UpcomingRow({ booking, index, now }) {
               </Link>
             )}
             <p className={ui.small}>Join opens 10 minutes before</p>
+            {booking.status === "confirmed" && (
+              <CancelBooking booking={booking} now={now} />
+            )}
           </>
         )
       }
     />
+  );
+}
+
+/**
+ * Cancelling with a full refund, until `cancellableUntil` (48 hours before
+ * class). It asks once more first, because a cancelled seat may go to
+ * someone else.
+ */
+function CancelBooking({ booking, now }) {
+  const cancel = useCancelBooking();
+  const [confirming, setConfirming] = useState(false);
+  const until = booking.cancellableUntil;
+  const untilText = `${formatThaiLongDate(until)}, ${formatThaiTime(until)}`;
+
+  if (now >= new Date(until).getTime()) {
+    return <p className={ui.small}>Cancelling closed on {untilText}.</p>;
+  }
+  if (!confirming) {
+    return (
+      <>
+        <button
+          type="button"
+          className={`${ui.link} ${styles.cancel}`}
+          onClick={() => setConfirming(true)}
+        >
+          Cancel booking
+        </button>
+        <p className={ui.small}>Full refund until {untilText} Thailand time.</p>
+      </>
+    );
+  }
+  return (
+    <div className={styles.confirm} role="group" aria-label="Cancel booking">
+      <p className={ui.body}>
+        Cancel and get {formatTHB(booking.total.amount)} back?
+      </p>
+      <div className={styles.confirmButtons}>
+        <button
+          type="button"
+          className={ui.primary}
+          onClick={() => cancel.mutate(booking.id)}
+          disabled={cancel.isPending}
+        >
+          {cancel.isPending ? "Cancelling…" : "Yes, cancel"}
+        </button>
+        <button
+          type="button"
+          className={ui.outline}
+          onClick={() => setConfirming(false)}
+          disabled={cancel.isPending}
+        >
+          Keep it
+        </button>
+      </div>
+      {cancel.error && (
+        <p className={ui.error} role="alert">
+          {errorText(cancel.error)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Deleting the account, at the end of the page, after one more ask. */
+function DeleteAccount({ onDeleted }) {
+  const remove = useDeleteAccount();
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <section className={styles.section} aria-labelledby="account-heading">
+      <h2 id="account-heading" className={ui.h3}>
+        Your account
+      </h2>
+      <p className={ui.body}>
+        You can delete your account and the details we keep about you. Bookings
+        you paid for stay in our records for accounting.
+      </p>
+      {confirming ? (
+        <div className={styles.confirm}>
+          <p className={ui.body}>
+            Delete your account? This can&apos;t be undone.
+          </p>
+          <div className={styles.confirmButtons}>
+            <button
+              type="button"
+              className={ui.primary}
+              onClick={() => remove.mutate(undefined, { onSuccess: onDeleted })}
+              disabled={remove.isPending}
+            >
+              {remove.isPending ? "Deleting…" : "Yes, delete it"}
+            </button>
+            <button
+              type="button"
+              className={ui.outline}
+              onClick={() => setConfirming(false)}
+              disabled={remove.isPending}
+            >
+              Keep my account
+            </button>
+          </div>
+          {remove.error && (
+            <p className={ui.error} role="alert">
+              {errorText(remove.error)}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div>
+          <button
+            type="button"
+            className={ui.outline}
+            onClick={() => setConfirming(true)}
+          >
+            Delete my account
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -234,9 +405,7 @@ function PastRow({ booking, index }) {
       tagClass={finished ? styles.pandan : styles.outlined}
       lines={[
         formatThaiLongDate(booking.startsAt),
-        finished
-          ? "Your recipe card is saved here."
-          : "This class was cancelled and refunded.",
+        finished ? "Your recipe card is saved here." : refundLine(booking),
       ]}
       actions={
         finished && (

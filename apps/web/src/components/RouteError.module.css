@@ -1,0 +1,16 @@
+.box {
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+  padding: 56px 0 96px;
+}
+
+.box p {
+  max-width: 640px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

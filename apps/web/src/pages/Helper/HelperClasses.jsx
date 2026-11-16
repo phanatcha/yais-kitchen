@@ -3,8 +3,12 @@ import { Link } from "react-router";
 import PhotoSlot from "../../components/PhotoSlot.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
 import StaffPage from "../../components/StaffPage.jsx";
-import { useClass } from "../../lib/booking.js";
-import { formatClassTime } from "../../lib/format.js";
+import { useBookingPages, useClass } from "../../lib/booking.js";
+import {
+  experienceName,
+  formatClassTime,
+  languageName,
+} from "../../lib/format.js";
 import { useClassTimes } from "../../lib/staff.js";
 import ui from "../../styles/ui.module.css";
 import staff from "../../components/StaffPage.module.css";
@@ -101,6 +105,55 @@ function ClassTimeRow({ classTime, index, now }) {
           </Link>
         </div>
       )}
+      {classTime.status === "published" && (
+        <Guests classTimeId={classTime.id} />
+      )}
     </li>
+  );
+}
+
+const BOOKED = ["confirmed", "completed"];
+
+/**
+ * Who is coming, so the helper can prepare: each guest's language, what
+ * they can't eat and how much they have cooked (from Your Details).
+ */
+function Guests({ classTimeId }) {
+  const query = useBookingPages({ classTimeId });
+  const booked = query.items.filter((b) => BOOKED.includes(b.status));
+
+  let content;
+  if (query.isPending) content = <p className={ui.small}>Loading guests…</p>;
+  else if (query.isError) content = <ErrorNotice error={query.error} />;
+  else if (booked.length === 0) {
+    content = <p className={ui.small}>No guests have booked yet.</p>;
+  } else {
+    content = (
+      <ul className={styles.guests}>
+        {booked.map((b) => (
+          <li key={b.id}>
+            <p className={styles.guestName}>
+              {b.guestName}, {b.guests} {b.guests === 1 ? "person" : "people"}
+            </p>
+            <p className={ui.small}>
+              Speaks {languageName(b.language ?? "en")}.{" "}
+              {b.cookingExperience
+                ? `${experienceName(b.cookingExperience)}.`
+                : ""}{" "}
+              {b.allergies
+                ? `Can't eat: ${b.allergies}`
+                : "No allergies given."}
+            </p>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <section className={styles.guestBox} aria-label="Guests">
+      <h4 className={styles.guestTitle}>Guests</h4>
+      {content}
+    </section>
   );
 }

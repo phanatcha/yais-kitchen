@@ -11,6 +11,7 @@ import {
   useUpdateChecklist,
 } from "../../lib/booking.js";
 import { errorText } from "../../lib/errors.js";
+import { formatThaiTime } from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./GetReady.module.css";
 
@@ -96,6 +97,7 @@ export default function GetReady() {
   let countdown = `Your class starts in ${timeUntil(startsIn)}`;
   if (startsIn <= 0) countdown = "Your class has started";
   if (endsIn <= 0 && startsIn < 0) countdown = "Your class has finished";
+  const joinOpen = now >= new Date(booking.joinOpensAt).getTime() && endsIn > 0;
 
   function toggleLocal(id) {
     const next = localTicks.includes(id)
@@ -150,20 +152,38 @@ export default function GetReady() {
             guests={booking.guests}
             total={booking.total}
           />
-          <Link
-            className={`${ui.primary} ${ui.block}`}
-            to={`/my-classes/${bookingId}/live`}
-          >
-            Join the live class
-          </Link>
+          {endsIn <= 0 ? (
+            <Link
+              className={`${ui.primary} ${ui.block}`}
+              to={`/my-classes/${bookingId}/after`}
+            >
+              See your recipe card
+            </Link>
+          ) : joinOpen ? (
+            <Link
+              className={`${ui.primary} ${ui.block}`}
+              to={`/my-classes/${bookingId}/live`}
+            >
+              Join the live class
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className={`${ui.primary} ${ui.block}`}
+              disabled
+            >
+              Join the live class
+            </button>
+          )}
           <Link className={`${ui.outline} ${ui.block}`} to="/my-classes">
             See my classes
           </Link>
-          <p className={`${ui.small} ${styles.joinNote}`}>
-            The class opens 10 minutes before it starts.
-            <br />
-            In this prototype you can join now.
-          </p>
+          {!joinOpen && endsIn > 0 && (
+            <p className={`${ui.small} ${styles.joinNote}`}>
+              The class opens 10 minutes before it starts, at{" "}
+              {formatThaiTime(booking.joinOpensAt)} Thailand time.
+            </p>
+          )}
         </>
       }
     >

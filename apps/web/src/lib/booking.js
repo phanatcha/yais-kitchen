@@ -1,5 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api, newIdempotencyKey, setAccessToken, withQuery } from "./api.js";
+import { saveCheckout } from "./checkout.js";
 
 // ---------------------------------------------------------------- catalog
 
@@ -54,12 +60,22 @@ export function useReleaseHold() {
   });
 }
 
-/** POST /auth/guest-sessions: a 30-minute token for checkout without signing in. */
+/**
+ * POST /auth/guest-sessions: a 30-minute token for checkout without signing
+ * in. It has no refresh cookie, so it is kept with the checkout in this tab
+ * (like the hold ID) to survive a reload until it expires.
+ */
 export function useStartGuestSession() {
   return useMutation({
     mutationFn: ({ email, name }) =>
       api("/auth/guest-sessions", { method: "POST", body: { email, name } }),
-    onSuccess: (session) => setAccessToken(session.accessToken),
+    onSuccess: (session) => {
+      setAccessToken(session.accessToken);
+      saveCheckout({
+        guestToken: session.accessToken,
+        guestTokenExpiresAt: Date.now() + session.expiresIn * 1000,
+      });
+    },
   });
 }
 
@@ -113,14 +129,26 @@ export function useBooking(bookingId, { pollWhilePending = false } = {}) {
   });
 }
 
-/** GET /booking/bookings: My Classes (tourist) or a Yai's bookings (family). */
-export function useBookings(params = {}, { enabled = true } = {}) {
-  return useQuery({
+/**
+ * GET /booking/bookings, a page at a time: My Classes (tourist), a Yai's
+ * bookings (family) or one class time's (helper). `items` joins the pages
+ * loaded so far; `fetchNextPage` loads the next while `hasNextPage`.
+ */
+export function useBookingPages(params = {}, { enabled = true } = {}) {
+  const query = useInfiniteQuery({
     queryKey: ["booking", "bookings", params],
-    queryFn: ({ signal }) =>
-      api(withQuery("/booking/bookings", params), { signal }),
+    queryFn: ({ signal, pageParam }) =>
+      api(withQuery("/booking/bookings", { ...params, cursor: pageParam }), {
+        signal,
+      }),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled,
   });
+  return {
+    ...query,
+    items: query.data?.pages.flatMap((page) => page.items) ?? [],
+  };
 }
 
 /** POST /booking/bookings/{bookingId}/cancel: full refund up to 48 h before. */

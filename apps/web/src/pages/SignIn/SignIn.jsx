@@ -124,8 +124,6 @@ export default function SignIn() {
   return (
     <section className={styles.page} aria-labelledby={titleId}>
       <div className={styles.inner}>
-        <p className={styles.tag}>Prototype: no real account or email</p>
-
         <div className={styles.columns}>
           <div className={styles.main}>
             <h1 id={titleId} className={styles.title}>

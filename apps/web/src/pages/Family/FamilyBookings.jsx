@@ -1,7 +1,7 @@
 import FamilyPage from "../../components/family/FamilyPage.jsx";
 import PhotoSlot from "../../components/PhotoSlot.jsx";
 import { ErrorNotice, Loading } from "../../components/QueryStatus.jsx";
-import { useBookings } from "../../lib/booking.js";
+import { useBookingPages } from "../../lib/booking.js";
 import { formatClassTime } from "../../lib/format.js";
 import ui from "../../styles/ui.module.css";
 import staff from "../../components/StaffPage.module.css";
@@ -34,12 +34,12 @@ export default function FamilyBookings() {
 }
 
 function BookingList({ yaiId, when, title }) {
-  const query = useBookings({ yaiId, when });
+  const query = useBookingPages({ yaiId, when });
 
   let content;
   if (query.isPending) content = <Loading />;
   else if (query.isError) content = <ErrorNotice error={query.error} />;
-  else if (query.data.items.length === 0) {
+  else if (query.items.length === 0) {
     content = (
       <p className={ui.notice}>
         {when === "upcoming"
@@ -49,33 +49,47 @@ function BookingList({ yaiId, when, title }) {
     );
   } else {
     content = (
-      <ul className={staff.list}>
-        {query.data.items.map((b, i) => {
-          const [label, tone] = STATUS[b.status] ?? [b.status, "outlined"];
-          const time = formatClassTime(b.startsAt);
-          return (
-            <li key={b.id} className={`${ui.card} ${staff.row}`}>
-              <PhotoSlot
-                label={b.class.dish}
-                tone={i + (when === "past" ? 2 : 0)}
-                className={styles.photo}
-              />
-              <div className={staff.rowInfo}>
-                <span className={`${staff.statusTag} ${staff[tone]}`}>
-                  {label}
-                </span>
-                <h3 className={ui.h3}>
-                  {b.guestName}, {b.guests}{" "}
-                  {b.guests === 1 ? "person" : "people"}
-                </h3>
-                <p className={ui.body}>
-                  {b.class.dish}, {time.thailand}
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <>
+        <ul className={staff.list}>
+          {query.items.map((b, i) => {
+            const [label, tone] = STATUS[b.status] ?? [b.status, "outlined"];
+            const time = formatClassTime(b.startsAt);
+            return (
+              <li key={b.id} className={`${ui.card} ${staff.row}`}>
+                <PhotoSlot
+                  label={b.class.dish}
+                  tone={i + (when === "past" ? 2 : 0)}
+                  className={styles.photo}
+                />
+                <div className={staff.rowInfo}>
+                  <span className={`${staff.statusTag} ${staff[tone]}`}>
+                    {label}
+                  </span>
+                  <h3 className={ui.h3}>
+                    {b.guestName}, {b.guests}{" "}
+                    {b.guests === 1 ? "person" : "people"}
+                  </h3>
+                  <p className={ui.body}>
+                    {b.class.dish}, {time.thailand}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {query.hasNextPage && (
+          <div>
+            <button
+              type="button"
+              className={ui.outline}
+              onClick={() => query.fetchNextPage()}
+              disabled={query.isFetchingNextPage}
+            >
+              {query.isFetchingNextPage ? "Loading…" : "Show more"}
+            </button>
+          </div>
+        )}
+      </>
     );
   }
 

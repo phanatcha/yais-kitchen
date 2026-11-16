@@ -12,22 +12,13 @@
   margin: 0 auto;
 }
 
-/* Tag/Sample */
-.tag {
-  width: fit-content;
-  margin: 0 0 0 auto;
-  padding: 7px 16px;
-  border: 2px solid var(--tamarind-brown);
-  border-radius: 999px;
-  font: 500 15px/20px var(--font-heading);
-}
-
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 520px) minmax(0, 660px);
   justify-content: space-between;
   column-gap: 48px;
-  margin-top: 26px;
+  /* Where the prototype tag used to sit above the columns. */
+  margin-top: 64px;
 }
 
 /* Heading/1 + Script/Large */
@@ -350,10 +341,6 @@
 }
 
 @media (max-width: 600px) {
-  .tag {
-    margin-left: 0;
-  }
-
   .titleMain {
     font-size: 44px;
     line-height: 52px;

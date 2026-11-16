@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import BookingLayout from "../../components/booking/BookingLayout.jsx";
 import BookingSummary from "../../components/booking/BookingSummary.jsx";
+import HoldTimer from "../../components/booking/HoldTimer.jsx";
 import MissingCheckout from "../../components/booking/MissingCheckout.jsx";
 import { hasAccessToken } from "../../lib/api.js";
 import {
@@ -120,6 +121,10 @@ export default function YourDetails() {
       lead="This helps your Yai and helper get ready for you."
       side={
         <>
+          <HoldTimer
+            expiresAt={checkout.hold.expiresAt}
+            classId={checkout.classInfo.id}
+          />
           <BookingSummary
             classInfo={checkout.classInfo}
             startsAt={checkout.startsAt}

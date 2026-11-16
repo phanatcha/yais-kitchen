@@ -10,3 +10,30 @@
     height: 120px;
   }
 }
+
+/* The guest brief under a class time, across the whole row. */
+.guestBox {
+  flex-basis: 100%;
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 2px solid var(--palm-sugar);
+}
+
+.guestTitle {
+  margin: 0;
+  font: 500 18px/24px var(--font-heading);
+}
+
+.guests {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guestName {
+  margin: 0;
+  font: 500 18px/28px var(--font-heading);
+}

@@ -39,6 +39,21 @@ export function useSignOut() {
   });
 }
 
+/**
+ * DELETE /auth/me (tourists): deletes the account and tells every service to
+ * forget the person. The token and cached data go with it.
+ */
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api("/auth/me", { method: "DELETE" }),
+    onSuccess: () => {
+      setAccessToken(null);
+      queryClient.clear();
+    },
+  });
+}
+
 /** GET /auth/me: the signed-in user. Pass `enabled: false` while signed out. */
 export function useMe({ enabled = true } = {}) {
   return useQuery({

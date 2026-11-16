@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useNavigate } from "react-router";
 import BookingLayout from "../../components/booking/BookingLayout.jsx";
 import BookingSummary from "../../components/booking/BookingSummary.jsx";
+import HoldTimer from "../../components/booking/HoldTimer.jsx";
 import MissingCheckout from "../../components/booking/MissingCheckout.jsx";
 import { useCreatePaymentIntent } from "../../lib/booking.js";
 import { readCheckout } from "../../lib/checkout.js";
@@ -54,6 +55,10 @@ export default function Payment() {
       titleScript="pay"
       side={
         <>
+          <HoldTimer
+            expiresAt={booking.expiresAt ?? checkout.hold?.expiresAt}
+            classId={checkout.classInfo.id}
+          />
           <BookingSummary
             classInfo={checkout.classInfo}
             startsAt={booking.startsAt ?? checkout.startsAt}

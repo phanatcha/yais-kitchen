@@ -1,9 +1,15 @@
 /**
  * What the visitor has picked so far in Book (07–10), kept for this tab only.
  * The hold ID is a secret, so it stays in sessionStorage and never in the URL.
- * Shape: { classInfo, hold, booking }
+ * Shape: { classInfo, hold, booking, details, guestToken, guestTokenExpiresAt }
  */
 const KEY = "yk_checkout";
+
+/** The guest checkout token, if this tab has one that hasn't expired. */
+export function guestToken() {
+  const { guestToken: token, guestTokenExpiresAt } = readCheckout();
+  return token && guestTokenExpiresAt > Date.now() ? token : null;
+}
 
 export function readCheckout() {
   try {

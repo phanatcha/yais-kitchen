@@ -116,3 +116,25 @@
     justify-content: flex-start;
   }
 }
+
+.more {
+  justify-self: start;
+}
+
+/* "Cancel booking" sits under Get ready as a quiet link. */
+.cancel {
+  margin-top: 4px;
+}
+
+/* The second ask before cancelling or deleting. */
+.confirm {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.confirmButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

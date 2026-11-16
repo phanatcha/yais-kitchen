@@ -91,3 +91,29 @@ export function formatDate(dateKey) {
     timeZone: "UTC",
   }).format(new Date(`${dateKey.slice(0, 10)}T00:00:00Z`));
 }
+
+const LANGUAGES = {
+  en: "English",
+  zh: "Chinese",
+  ja: "Japanese",
+  ko: "Korean",
+  fr: "French",
+  de: "German",
+  es: "Spanish",
+};
+
+/** "ja" → "Japanese" (HelperLanguage) */
+export function languageName(code) {
+  return LANGUAGES[code] ?? code;
+}
+
+const EXPERIENCE = {
+  new: "New to cooking",
+  some: "Cooks a little",
+  lots: "Cooks a lot",
+};
+
+/** "some" → "Cooks a little" (CookingExperience) */
+export function experienceName(code) {
+  return EXPERIENCE[code] ?? code;
+}

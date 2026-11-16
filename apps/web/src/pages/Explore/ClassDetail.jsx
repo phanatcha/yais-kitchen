@@ -46,6 +46,7 @@ export default function ClassDetail() {
 
   return (
     <div className={styles.page}>
+      <title>{`${c.dish} with ${c.yaiName} · Yai's Kitchen`}</title>
       <section className={ex.section}>
         <div className={`${ex.inner} ${styles.banner}`}>
           <span className={styles.photoLabel}>

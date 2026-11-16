@@ -50,6 +50,7 @@ export default function YaiProfile() {
 
   return (
     <>
+      <title>{`${yai.name} · Yai's Kitchen`}</title>
       <section className={ex.section}>
         <div className={`${ex.inner} ${styles.hero}`}>
           <div className={styles.portrait}>

@@ -1,4 +1,4 @@
-import { Link, Outlet, useMatches } from "react-router";
+import { Link, Outlet, ScrollRestoration, useMatches } from "react-router";
 import Footer from "./components/site/Footer.jsx";
 import Nav from "./components/site/Nav.jsx";
 import styles from "./App.module.css";
@@ -45,6 +45,8 @@ export default function App() {
         <Outlet />
       </main>
       {footer && <Footer />}
+      {/* New pages open at the top; Back returns to where you were. */}
+      <ScrollRestoration />
       {import.meta.env.DEV && (
         // Pages without a link from the designed pages yet. Dev builds only.
         <nav aria-label="Dev pages" className={styles.devNav}>

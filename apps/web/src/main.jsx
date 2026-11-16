@@ -3,12 +3,18 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router/dom";
 import { router } from "./router.jsx";
-import { ApiError, refreshSession } from "./lib/api.js";
+import { ApiError, refreshSession, setAccessToken } from "./lib/api.js";
+import { guestToken } from "./lib/checkout.js";
 import "./index.css";
 
 // The access token lives in memory, so a reload starts without one. If the
-// refresh cookie is still good, this signs the visitor back in.
-refreshSession();
+// refresh cookie is still good, this signs the visitor back in; if not, a
+// guest checkout in this tab carries on with its token. API calls wait for
+// this, and this runs before them.
+refreshSession().then((signedIn) => {
+  const token = !signedIn && guestToken();
+  if (token) setAccessToken(token);
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
