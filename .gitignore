@@ -8,3 +8,5 @@ coverage/
 .DS_Store
 .impeccable/
 *.pem
+# Media's files when it runs outside Docker.
+.media/

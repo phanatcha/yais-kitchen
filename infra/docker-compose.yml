@@ -97,6 +97,7 @@ services:
       args: { SERVICE: catalog }
     environment:
       <<: *addresses
+      MEDIA_PUBLIC_URL: http://localhost:3006/files
     ports: ["127.0.0.1:3002:3002"]
     healthcheck:
       <<: *ready
@@ -122,6 +123,23 @@ services:
       <<: *ready
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3007/ready"]
 
+  # Photos and videos. Ready files are served at http://localhost:3006/files.
+  media:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: { SERVICE: media }
+    environment:
+      <<: *addresses
+      MEDIA_DIR: /data/media
+      MEDIA_SELF_URL: http://localhost:3006
+    volumes: [media:/data/media]
+    ports: ["127.0.0.1:3006:3006"]
+    healthcheck:
+      <<: *ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3006/ready"]
+
   gateway:
     <<: *service
     build:
@@ -132,12 +150,15 @@ services:
       MOCK_URL: http://mock:4010
       AUTH_URL: http://auth:3001
       CATALOG_URL: http://catalog:3002
+      MEDIA_URL: http://media:3006
     depends_on:
       mock:
         condition: service_healthy
       auth:
         condition: service_healthy
       catalog:
+        condition: service_healthy
+      media:
         condition: service_healthy
     ports: ["127.0.0.1:8080:8080"]
     healthcheck:
@@ -147,3 +168,4 @@ services:
 volumes:
   mongo:
   rabbitmq:
+  media:

@@ -15,11 +15,15 @@ COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts
 
 FROM node:22.23-alpine
+ARG SERVICE
+# Media converts videos with ffmpeg, and keeps files in /data/media.
+RUN if [ "$SERVICE" = "media" ]; then \
+      apk add --no-cache ffmpeg && install -d -o node -g node /data/media; \
+    fi
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=deps /app ./
 COPY . .
-ARG SERVICE
 WORKDIR /app/services/${SERVICE}
 USER node
 CMD ["node", "src/server.js"]

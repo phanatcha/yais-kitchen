@@ -2,13 +2,15 @@
 // FAQ, so the Explore pages have something to show. Every Yai here has
 // `isSample: true`; Admin adds the real Yai in the app.
 //   npm run seed -w @yais-kitchen/catalog
-// Photos point at placeholder asset IDs, so images stay blank until media
-// has files for them.
+// Photos are asset IDs that media's own seed fills from services/media/samples,
+// so run that seed too. Running this again on a catalog made before the
+// photos existed swaps the old placeholder for them.
 import { loadConfig } from "@yais-kitchen/shared";
 import mongoose from "mongoose";
 import { createStore } from "../src/store.js";
 
-const PHOTO = "6650a1f2c3d4e5f6a7b8c9a1";
+// The placeholder every sample used before media had sample photos.
+const OLD_PHOTO = "6650a1f2c3d4e5f6a7b8c9a1";
 const thb = (baht) => ({ amount: baht * 100, currency: "THB" });
 
 const SAMPLES = [
@@ -17,6 +19,10 @@ const SAMPLES = [
       name: "Yai Somsri",
       nameThai: "ยายสมศรี",
       region: "north",
+      photo: {
+        assetId: "6650a1f2c3d4e5f6a7b8c9b1",
+        alt: "Yai Somsri smiling at home",
+      },
       story:
         "Yai Somsri has cooked for her family in Chiang Mai for fifty years. Her khao soi is the one the neighbours ask for.",
       isFeatured: true,
@@ -24,6 +30,10 @@ const SAMPLES = [
     classes: [
       {
         dish: "Khao Soi",
+        photo: {
+          assetId: "6650a1f2c3d4e5f6a7b8c9b4",
+          alt: "A bowl of khao soi",
+        },
         dishThai: "ข้าวซอย",
         description:
           "Curry noodle soup with crispy noodles on top, the way it is made in Chiang Mai.",
@@ -74,6 +84,10 @@ const SAMPLES = [
       },
       {
         dish: "Sai Ua",
+        photo: {
+          assetId: "6650a1f2c3d4e5f6a7b8c9b5",
+          alt: "Sliced sai ua with fresh herbs",
+        },
         dishThai: "ไส้อั่ว",
         description: "Northern sausage packed with lemongrass and herbs.",
         price: thb(800),
@@ -87,12 +101,20 @@ const SAMPLES = [
       name: "Yai Boonmee",
       nameThai: "ยายบุญมี",
       region: "northeast",
+      photo: {
+        assetId: "6650a1f2c3d4e5f6a7b8c9b2",
+        alt: "Yai Boonmee in her garden apron",
+      },
       story:
         "Yai Boonmee grows her own chillies in Khon Kaen and pounds every som tam by hand.",
     },
     classes: [
       {
         dish: "Som Tam",
+        photo: {
+          assetId: "6650a1f2c3d4e5f6a7b8c9b6",
+          alt: "A plate of som tam",
+        },
         dishThai: "ส้มตำ",
         description: "Green papaya salad, as hot as you can take it.",
         price: thb(800),
@@ -106,11 +128,19 @@ const SAMPLES = [
       name: "Yai Malee",
       nameThai: "ยายมาลี",
       region: "south",
+      photo: {
+        assetId: "6650a1f2c3d4e5f6a7b8c9b3",
+        alt: "Yai Malee picking flowers in her garden",
+      },
       story: "Yai Malee learned to cook from her mother in Songkhla.",
     },
     classes: [
       {
         dish: "Massaman Curry",
+        photo: {
+          assetId: "6650a1f2c3d4e5f6a7b8c9b7",
+          alt: "A bowl of massaman curry",
+        },
         dishThai: "แกงมัสมั่น",
         description: "A slow curry with potatoes and peanuts.",
         price: thb(1000),
@@ -155,22 +185,40 @@ try {
   const store = createStore(connection);
   await store.init();
   if (await store.Yai.exists({})) {
-    console.log("The catalog already has Yais, so nothing was added.");
+    let swapped = 0;
+    for (const { yai, classes } of SAMPLES) {
+      const old = { isSample: true, "photos.assetId": OLD_PHOTO };
+      const { modifiedCount } = await store.Yai.updateMany(
+        { ...old, name: yai.name },
+        { $set: { photos: [yai.photo] } },
+      );
+      swapped += modifiedCount;
+      for (const { dish, photo } of classes) {
+        const result = await store.Class.updateMany(
+          { dish, "photo.assetId": OLD_PHOTO },
+          { $set: { photo } },
+        );
+        swapped += result.modifiedCount;
+      }
+    }
+    console.log(
+      `The catalog already has Yais, so nothing was added. Gave ${swapped} samples their photos.`,
+    );
   } else {
     const createdAt = new Date();
     for (const sample of SAMPLES) {
+      const { photo, ...fields } = sample.yai;
       const yai = await store.Yai.create({
-        photos: [{ assetId: PHOTO }],
+        photos: [photo],
         isSample: true,
         isVisible: true,
         isFeatured: false,
         createdAt,
-        ...sample.yai,
+        ...fields,
       });
       for (const fields of sample.classes) {
         await store.Class.create({
           yaiId: yai._id,
-          photo: { assetId: PHOTO },
           isVisible: true,
           isFeatured: false,
           createdAt,
