@@ -98,6 +98,19 @@
 
 /* ---------- Brown band: In her kitchen ---------- */
 
+.intro {
+  padding-top: 54px;
+}
+
+.introVideo {
+  display: block;
+  width: 100%;
+  max-height: min(80vh, 720px);
+  margin-top: 32px;
+  border-radius: 28px;
+  background: var(--tamarind-brown);
+}
+
 .kitchen {
   padding-top: 34px;
   padding-bottom: 60px;

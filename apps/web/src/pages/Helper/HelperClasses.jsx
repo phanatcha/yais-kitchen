@@ -79,6 +79,8 @@ function ClassTimeRow({ classTime, index, now }) {
     <li className={`${ui.card} ${staff.row}`}>
       <PhotoSlot
         label={c?.dish ?? "Class"}
+        photo={c?.photo}
+        sizes="160px"
         tone={index}
         className={styles.photo}
       />

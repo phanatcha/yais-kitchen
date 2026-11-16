@@ -100,6 +100,8 @@ export default function ClassDetail() {
                 shape="circle"
                 tone="palm"
                 label={yai?.photo?.alt || "Yai portrait"}
+                photo={yai?.photo}
+                sizes="240px"
                 className={styles.yaiPhoto}
               />
               <div className={styles.yaiText}>

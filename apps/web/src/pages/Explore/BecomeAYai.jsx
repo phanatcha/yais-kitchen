@@ -12,6 +12,9 @@ import { faqAnchor, useFaq } from "../../lib/catalog.js";
 import ui from "../../styles/ui.module.css";
 import ex from "../../styles/explore.module.css";
 import styles from "./BecomeAYai.module.css";
+import grandchildPhoto from "../../assets/photos/yai-and-grandchild.webp";
+import familyDishPhoto from "../../assets/photos/family-dish.webp";
+import tablePhoto from "../../assets/photos/yai-at-her-table.webp";
 
 const STEPS = [
   [
@@ -81,6 +84,8 @@ export default function BecomeAYai() {
           <div className={styles.collage} aria-hidden="true">
             <PhotoSlot
               label="Photo: Yai and grandchild"
+              src={grandchildPhoto}
+              alt="A Thai grandmother and her grandson giving alms to a monk"
               tone="palm"
               className={styles.photo}
             />
@@ -100,6 +105,8 @@ export default function BecomeAYai() {
             />
             <PhotoSlot
               label="Her family dish"
+              src={familyDishPhoto}
+              alt="A plate of massaman curry"
               tone="rice"
               shape="circle"
               className={styles.dish}
@@ -150,6 +157,8 @@ export default function BecomeAYai() {
         <div className={`${ex.inner} ${styles.panel}`}>
           <PhotoSlot
             label="Yai at her table"
+            src={tablePhoto}
+            alt="A Thai grandmother wrapping food in leaves"
             tone="thaiTea"
             shape="circle"
             className={styles.panelPhoto}

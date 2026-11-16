@@ -16,6 +16,11 @@ import { useClasses, useYais } from "../../lib/catalog.js";
 import ui from "../../styles/ui.module.css";
 import ex from "../../styles/explore.module.css";
 import styles from "./Home.module.css";
+import yaiCookingPhoto from "../../assets/photos/yai-cooking-at-home.webp";
+import templePhoto from "../../assets/photos/temple-at-sunset.webp";
+import marketPhoto from "../../assets/photos/floating-market.webp";
+import dishPhoto from "../../assets/photos/dish-from-above.webp";
+import yaiHomePhoto from "../../assets/photos/yai-at-home.webp";
 
 const STEPS = [
   ["Pick a Yai", "Choose a grandmother and the family recipes she teaches."],
@@ -126,16 +131,22 @@ export default function Home() {
           <div className={styles.collage} aria-hidden="true">
             <PhotoSlot
               label="Yai cooking at home"
+              src={yaiCookingPhoto}
+              alt="A Thai grandmother smiling in her kitchen"
               tone="palm"
               className={`${styles.photo} ${styles.photoHome}`}
             />
             <PhotoSlot
               label="Temple at sunset"
+              src={templePhoto}
+              alt="Wat Arun in Bangkok at sunset"
               tone="pandan"
               className={`${styles.photo} ${styles.photoTemple}`}
             />
             <PhotoSlot
               label="Floating market"
+              src={marketPhoto}
+              alt="Boats selling food at a Thai floating market"
               tone="thaiTea"
               className={`${styles.photo} ${styles.photoMarket}`}
             />
@@ -155,6 +166,8 @@ export default function Home() {
             />
             <PhotoSlot
               label="Dish from above"
+              src={dishPhoto}
+              alt="A pot of Thai green curry"
               tone="rice"
               shape="circle"
               className={styles.dish}
@@ -264,6 +277,8 @@ export default function Home() {
         <div className={`${ex.inner} ${styles.panel}`}>
           <PhotoSlot
             label="Yai at home"
+            src={yaiHomePhoto}
+            alt="An older Thai woman smiling"
             tone="thaiTea"
             shape="circle"
             className={styles.panelPhoto}

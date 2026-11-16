@@ -7,7 +7,12 @@ import ringPalm from "../../assets/dish-ring-palm.svg";
 import ringPandan from "../../assets/dish-ring-pandan.svg";
 import ringTea from "../../assets/dish-ring-tea.svg";
 import ringTurmeric from "../../assets/dish-ring-turmeric.svg";
-import dishSlot from "../../assets/dish-slot.svg";
+import allPhoto from "../../assets/photos/dishes/all.webp";
+import curriesPhoto from "../../assets/photos/dishes/curries.webp";
+import dessertsPhoto from "../../assets/photos/dishes/desserts.webp";
+import noodlesPhoto from "../../assets/photos/dishes/noodles.webp";
+import saladsPhoto from "../../assets/photos/dishes/salads.webp";
+import stirFriesPhoto from "../../assets/photos/dishes/stir-fries.webp";
 import sparkle from "../../assets/sparkle-56.svg";
 import zigzag from "../../assets/zigzag-dish.svg";
 import { useClassPages } from "../../lib/catalog.js";
@@ -21,17 +26,48 @@ import styles from "./BrowseClasses.module.css";
  * dish names and descriptions for a word. The chosen circle has the coral ring.
  */
 const DISHES = [
-  { key: "", label: "All dishes", word: "", ring: ringPalm },
-  { key: "curries", label: "Curries", word: "curry", ring: ringTea },
-  { key: "noodles", label: "Noodles", word: "noodle", ring: ringPandan },
+  {
+    key: "",
+    label: "All dishes",
+    word: "",
+    ring: ringPalm,
+    photo: allPhoto,
+  },
+  {
+    key: "curries",
+    label: "Curries",
+    word: "curry",
+    ring: ringTea,
+    photo: curriesPhoto,
+  },
+  {
+    key: "noodles",
+    label: "Noodles",
+    word: "noodle",
+    ring: ringPandan,
+    photo: noodlesPhoto,
+  },
   {
     key: "stir-fries",
     label: "Stir-fries",
     word: "stir-fr",
     ring: ringTurmeric,
+    photo: stirFriesPhoto,
   },
-  { key: "salads", label: "Salads", word: "salad", ring: ringPandan },
-  { key: "desserts", label: "Desserts", word: "dessert", ring: ringPalm },
+  {
+    key: "salads",
+    label: "Salads",
+    word: "salad",
+    ring: ringPandan,
+    photo: saladsPhoto,
+  },
+  {
+    key: "desserts",
+    label: "Desserts",
+    word: "dessert",
+    ring: ringPalm,
+    photo: dessertsPhoto,
+  },
 ];
 
 /** Figma 05 Browse Classes. */
@@ -117,7 +153,7 @@ export default function BrowseClasses() {
                     />
                     <img
                       className={styles.slot}
-                      src={dishSlot}
+                      src={d.photo}
                       alt=""
                       width="108"
                       height="108"

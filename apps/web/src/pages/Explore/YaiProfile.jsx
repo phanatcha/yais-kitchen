@@ -13,7 +13,8 @@ import ui from "../../styles/ui.module.css";
 import ex from "../../styles/explore.module.css";
 import styles from "./YaiProfile.module.css";
 
-// Fill the row of three until the family adds photos of her kitchen.
+// Her first photo is the portrait. Fill the row of three until the family
+// adds photos of her kitchen.
 const KITCHEN_SLOTS = [
   { alt: "Her home kitchen" },
   { alt: "Her hands at work" },
@@ -43,7 +44,7 @@ export default function YaiProfile() {
 
   const yai = query.data;
   const classes = yai.classes ?? [];
-  const photos = [...(yai.photos ?? []), ...KITCHEN_SLOTS].slice(0, 3);
+  const photos = [...(yai.photos ?? []).slice(1), ...KITCHEN_SLOTS].slice(0, 3);
   // One class goes straight to it; with more, she picks from the list below.
   const bookHref =
     classes.length === 1 ? `/classes/${classes[0].id}` : "#recipes";
@@ -66,6 +67,8 @@ export default function YaiProfile() {
               shape="circle"
               tone="palm"
               label={yai.photo?.alt || `${yai.name} portrait`}
+              photo={yai.photo}
+              sizes="480px"
               className={styles.photo}
             />
           </div>
@@ -112,6 +115,27 @@ export default function YaiProfile() {
         </div>
       </section>
 
+      {yai.introVideo && (
+        <section className={`${ex.section} ${styles.intro}`}>
+          <div className={ex.inner}>
+            <h2 className={ui.title}>
+              <span className={ui.titleMain}>Meet</span>{" "}
+              <span className={ui.titleScript}>{yai.name}</span>
+            </h2>
+            <video
+              className={styles.introVideo}
+              src={yai.introVideo.url}
+              poster={yai.introVideo.posterUrl}
+              controls
+              playsInline
+              preload="metadata"
+            >
+              Your browser can&apos;t play this video.
+            </video>
+          </div>
+        </section>
+      )}
+
       <section id="recipes" className={`${ex.section} ${styles.recipes}`}>
         <div className={ex.inner}>
           <div className={ex.sectionHead}>
@@ -146,6 +170,7 @@ export default function YaiProfile() {
               <li key={p.assetId ?? p.alt}>
                 <PhotoSlot
                   label={p.alt}
+                  photo={p.urls && p}
                   tone={KITCHEN_TONES[i]}
                   className={styles.kitchenPhoto}
                 />

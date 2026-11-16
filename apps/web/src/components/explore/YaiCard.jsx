@@ -20,6 +20,8 @@ export default function YaiCard({ yai, index, headingLevel = 3 }) {
         shape="circle"
         tone={TONES[index % TONES.length]}
         label={yai.photo?.alt || "Yai portrait"}
+        photo={yai.photo}
+        sizes="240px"
         className={styles.portrait}
         // The placeholder's label would read her name twice inside the link.
         aria-hidden="true"

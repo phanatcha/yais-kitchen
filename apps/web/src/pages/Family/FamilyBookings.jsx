@@ -58,6 +58,8 @@ function BookingList({ yaiId, when, title }) {
               <li key={b.id} className={`${ui.card} ${staff.row}`}>
                 <PhotoSlot
                   label={b.class.dish}
+                  photo={b.class.photo}
+                  sizes="160px"
                   tone={i + (when === "past" ? 2 : 0)}
                   className={styles.photo}
                 />

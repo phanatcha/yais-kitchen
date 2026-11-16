@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError } from "../../lib/api.js";
 import { ACCOUNT_LINKS, useRequestCode, useSignIn } from "../../lib/auth.js";
 import iconCheck from "../../assets/icon-check.svg";
-import imageMark from "../../assets/image-mark.svg";
 import sparkle from "../../assets/sparkle.svg";
 import styles from "./SignIn.module.css";
+import handsPhoto from "../../assets/photos/hands-chili-paste.webp";
 
 const CODE_LENGTH = 6;
 /** Seconds before "Send a new code" unlocks after a code is sent. */
@@ -306,10 +306,11 @@ export default function SignIn() {
               height="72"
             />
             <div className={styles.photo}>
-              <img src={imageMark} alt="" width="32" height="26" />
-              <span className={styles.photoLabel}>
-                Photo: Yai&apos;s hands pounding chili paste
-              </span>
+              <img
+                className={styles.photoImage}
+                src={handsPhoto}
+                alt="Hands pounding chili paste in a stone mortar"
+              />
             </div>
             <figcaption className={styles.caption}>
               Your classes, shopping lists and recipe cards, all in one place.

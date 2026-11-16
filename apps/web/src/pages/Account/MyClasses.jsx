@@ -179,6 +179,8 @@ function Row({ booking, index, tag, tagClass, lines, actions }) {
     <li className={`${ui.card} ${styles.row}`}>
       <PhotoSlot
         label={booking.class.dish}
+        photo={booking.class.photo}
+        sizes="240px"
         tone={index}
         className={styles.photo}
       />
